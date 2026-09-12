@@ -2,6 +2,14 @@ import { describe, expect, it } from "vitest";
 import { parseCommand } from "../src/args.js";
 
 describe("parseCommand serve and open arguments", () => {
+  it.each(["9007199254740992", "9007199254740991h", "9".repeat(310)])(
+    "rejects a timeout that cannot be represented safely: %s",
+    (timeout) => {
+      expect(() => parseCommand(["serve", "--timeout", timeout])).toThrow(
+        /Invalid --timeout/,
+      );
+    },
+  );
   it("parses static server options", () => {
     expect(
       parseCommand([

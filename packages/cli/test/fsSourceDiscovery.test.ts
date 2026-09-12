@@ -16,6 +16,25 @@ afterEach(async () => {
 });
 
 describe("readSourceFiles discovery", () => {
+  it.each([false, true])(
+    "includes safe two-dot child names via includePaths: %s",
+    async (includePaths) => {
+      await mkdir(path.join(tempRoot, "..cache"));
+      await writeFile(path.join(tempRoot, "..cache", "source.ts"), "inside\n");
+      await writeFile(path.join(tempRoot, "..source.ts"), "root child\n");
+      const files = await readSourceFiles(includePaths ? [] : ["."], {
+        root: tempRoot,
+        extensions: [".ts"],
+        ...(includePaths
+          ? { includePaths: ["..cache/source.ts", "..source.ts"] }
+          : {}),
+      });
+      expect(files).toEqual([
+        { path: "..cache/source.ts", content: "inside\n" },
+        { path: "..source.ts", content: "root child\n" },
+      ]);
+    },
+  );
   it("includes source files inside a nested directory whose name happens to match an ignored-at-root entry", async () => {
     await mkdir(path.join(tempRoot, "src", "coverage"), { recursive: true });
     await writeFile(

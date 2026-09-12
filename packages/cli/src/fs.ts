@@ -1,6 +1,7 @@
 import { sourceExtensionsForLanguages } from "@0xdoublesharp/doublcov-core";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { isInsideRoot } from "./serverHelpers.js";
 
 const ignoredAtAnyDepth = new Set([
   ".git",
@@ -216,9 +217,7 @@ function isInsideAnyRealRoot(target: string, realRoots: Set<string>): boolean {
 }
 
 function isInsideRealRoot(target: string, realRoot: string): boolean {
-  if (target === realRoot) return true;
-  const rel = path.relative(realRoot, target);
-  return rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
+  return isInsideRoot(target, realRoot);
 }
 
 async function collectExistingFiles(
@@ -252,14 +251,6 @@ function normalizeExtension(extension: string): string {
 function formatSourcePath(filePath: string, root: string): string {
   const relative = path.relative(root, filePath);
   return (
-    isInsidePathRoot(filePath, root) && relative ? relative : filePath
+    isInsideRoot(filePath, root) && relative ? relative : filePath
   ).replaceAll(path.sep, "/");
-}
-
-function isInsidePathRoot(filePath: string, root: string): boolean {
-  const relative = path.relative(root, filePath);
-  return (
-    relative === "" ||
-    (!relative.startsWith("..") && !path.isAbsolute(relative))
-  );
 }

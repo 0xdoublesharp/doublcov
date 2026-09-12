@@ -301,7 +301,13 @@ function parseTimeout(value: string | undefined): number {
         : unit === "s"
           ? 1000
           : 1;
-  return amount * multiplier;
+  const timeoutMs = amount * multiplier;
+  if (!Number.isSafeInteger(timeoutMs)) {
+    throw new Error(
+      `Invalid --timeout "${value}". Duration in milliseconds must be a safe integer.`,
+    );
+  }
+  return timeoutMs;
 }
 
 function parsePort(value: string | undefined): number {

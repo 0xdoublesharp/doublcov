@@ -4,7 +4,9 @@ export function isInsideRoot(targetPath: string, root: string): boolean {
   const relative = path.relative(root, targetPath);
   return (
     relative === "" ||
-    (!relative.startsWith("..") && !path.isAbsolute(relative))
+    (relative !== ".." &&
+      !relative.startsWith(`..${path.sep}`) &&
+      !path.isAbsolute(relative))
   );
 }
 

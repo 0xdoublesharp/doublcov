@@ -11,6 +11,14 @@ import { injectServerLeasePrompt } from "../src/serverClient.js";
 describe("isInsideRoot", () => {
   const root = path.resolve("/tmp/report-root");
 
+  it("accepts child names starting with two dots without accepting parent traversal", () => {
+    expect(isInsideRoot(path.join(root, "..cache", "asset.js"), root)).toBe(
+      true,
+    );
+    expect(isInsideRoot(path.join(root, "..index.html"), root)).toBe(true);
+    expect(isInsideRoot(path.join(root, "..", "asset.js"), root)).toBe(false);
+  });
+
   it("returns true for the root itself", () => {
     expect(isInsideRoot(root, root)).toBe(true);
   });

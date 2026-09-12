@@ -100,6 +100,20 @@ afterEach(async () => {
 });
 
 describe("serveRequest", () => {
+  it("serves assets under child directories whose names start with two dots", async () => {
+    await mkdir(path.join(reportRoot, "..assets"));
+    await writeFile(
+      path.join(reportRoot, "..assets", "theme.css"),
+      "body { color: red; }",
+    );
+    const result = await fetchPath(
+      reportRoot,
+      makeState(),
+      "/..assets/theme.css",
+    );
+    expect(result.status).toBe(200);
+    expect(result.body).toBe("body { color: red; }");
+  });
   it("serves index.html with a 200 and the lease-prompt injected", async () => {
     const result = await fetchPath(reportRoot, makeState(), "/");
     expect(result.status).toBe(200);
