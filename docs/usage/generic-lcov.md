@@ -84,6 +84,12 @@ For tools that always write `lcov.info` inside a report directory, `--lcov` must
     path: coverage/report
 ```
 
+## Function records and large reports
+
+Doublcov reads legacy `FN`/`FNDA` records, including the optional function end line, and LCOV 2.2 `FNL`/`FNA` groups. Aliases within a group share one function total and their execution counts are summed. Function names containing commas remain intact.
+
+Files with more than 800 source lines display a 400-line window. Next and Previous stop at the file boundaries. Syntax highlighting preserves comment and string context across windows; an initial jump far into a file may show fallback highlighting while the preceding context is scanned. Switching files cancels obsolete highlighting work.
+
 ## Troubleshooting
 
 - **Files missing from the report.** LCOV records source paths as written by the coverage tool. If those paths are absolute or relative to a different root, pass `--sources` for each root or run `doublcov build` from the directory the tool used as its base.

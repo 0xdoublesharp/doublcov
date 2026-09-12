@@ -27,7 +27,7 @@ Tagged stable semver pushes (`v*.*.*`) trigger [`.github/workflows/release.yml`]
 6. **`container-manifest`** — publishes the multi-arch `:<tag>` and `:latest` image manifests.
 7. **`major-tag`** — after the release, npm, and container publish succeed, force-updates the moving major tag (`v0` for `v0.x.y`) to the released commit.
 
-Pull requests and `main` pushes run [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) (`verify:publish` only, no artifacts).
+Pull requests and `main` pushes run [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) (`verify:publish` and browser tests, no release artifacts).
 
 ## Action Major Tags
 
@@ -44,7 +44,7 @@ Use the action `version` input to control which Doublcov binary the action downl
 ```yaml
 - uses: doublesharp/doublcov@v0
   with:
-    version: v0.4.3
+    version: v0.4.4
 ```
 
 Omit `version` to download the latest GitHub Release binary. Pin `version` in reproducible CI examples; omit it in quick-start examples where following the latest release is acceptable.
@@ -79,3 +79,14 @@ Builder subcommands still require their underlying tool on `PATH` (e.g. `doublco
 ## Core Package
 
 `@0xdoublesharp/doublcov-core` is marked `private: true` in the workspace. Publish only when external consumers need the LCOV parser/report model API. To publish: remove `private`, add full package metadata, and keep CLI and core versions aligned until the API stabilizes.
+
+## Fixture report previews
+
+After installing dependencies, build the CLI and generate standalone sample reports:
+
+```bash
+pnpm run build
+pnpm run showcase:reports
+```
+
+Open `coverage/showcases/index.html` to browse the Solidity, Rust, TS/JS, and mixed-language fixtures. The command regenerates `coverage/showcases`; these are local preview artifacts and are not published with the npm package.

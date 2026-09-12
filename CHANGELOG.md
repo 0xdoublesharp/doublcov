@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.4
+
+Fixes coverage parsing and source-viewer navigation, improves large LCOV performance, and updates dependencies.
+
+- Parse LCOV function end-line fields and LCOV 2.2 function groups correctly, including alias hit counts and numeric legacy function names.
+- Keep distinct Rust functions with shared underscore suffixes separate when collapsing duplicate crate instances.
+- Index function names during LCOV parsing to avoid repeated table scans on large inputs.
+- Reject overflowing timeout values and include valid child paths whose names start with two dots.
+- Share pending source requests, retry failed loads, and prevent stale source text, errors, or scrolling after file changes.
+- Clamp source-window navigation and preserve multiline comment/string highlighting across windows. Highlighting yields between prefix chunks and cancels superseded work.
+- Strengthen fuzz assertions, delayed-response tests, large-file regressions, and browser checks using real syntax highlighting.
+- Update runtime and development dependencies, retain TypeScript 6.0.3 for tooling compatibility, and patch the transitive `qs` dependency.
+- Add `pnpm run showcase:reports` to generate standalone Solidity, Rust, TS/JS, and mixed-language fixture reports.
+
 ## 0.4.3
 
 Fixes Rust coverage false-positives from duplicate LLVM monomorphization records and tightens the core verification path.
