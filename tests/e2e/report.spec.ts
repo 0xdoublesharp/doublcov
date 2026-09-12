@@ -3,25 +3,13 @@ import { expect, test } from "@playwright/test";
 test("source windows preserve comment context and navigate back from the last window", async ({
   page,
 }) => {
-  await page.route("http://127.0.0.1:60733/", async (route) => {
+  await page.route("**/data/files/0001-src-counter-sol.json", async (route) => {
     const response = await route.fetch();
-    const html = await response.text();
-    const body = html.replace(
-      /(<script type="application\/json" id="doublcov-source-data">)([\s\S]*?)(<\/script>)/,
-      (_match, open: string, json: string, close: string) => {
-        const sources = JSON.parse(json) as Record<string, { lines: string[] }>;
-        const source = Object.values(sources)[0]!;
-        source.lines = Array.from({ length: 1000 }, (_, index) =>
-          index === 0
-            ? "/*"
-            : index === 900
-              ? "*/"
-              : `uint256 value_${index} = 1;`,
-        );
-        return `${open}${JSON.stringify(sources)}${close}`;
-      },
+    const source = (await response.json()) as { lines: string[] };
+    source.lines = Array.from({ length: 1000 }, (_, index) =>
+      index === 0 ? "/*" : index === 900 ? "*/" : `uint256 value_${index} = 1;`,
     );
-    await route.fulfill({ response, body });
+    await route.fulfill({ response, json: source });
   });
   await page.goto("/");
   await expect(page.locator(".code-line")).toHaveCount(400);

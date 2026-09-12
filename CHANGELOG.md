@@ -10,7 +10,7 @@ Fixes coverage parsing and source-viewer navigation, improves large LCOV perform
 - Reject overflowing timeout values and include valid child paths whose names start with two dots.
 - Share pending source requests, retry failed loads, and prevent stale source text, errors, or scrolling after file changes.
 - Clamp source-window navigation and preserve multiline comment/string highlighting across windows. Highlighting yields between prefix chunks and cancels superseded work.
-- Strengthen fuzz assertions, delayed-response tests, large-file regressions, and browser checks using real syntax highlighting.
+- Strengthen fuzz assertions, delayed-response tests, large-file regressions, and browser checks using real syntax highlighting. Browser tests start a fresh fixture server and intercept the static source response.
 - Update runtime and development dependencies, retain TypeScript 6.0.3 for tooling compatibility, and patch the transitive `qs` dependency.
 - Add `pnpm run showcase:reports` to generate standalone Solidity, Rust, TS/JS, and mixed-language fixture reports.
 
