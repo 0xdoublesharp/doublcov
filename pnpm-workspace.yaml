@@ -1,3 +1,7 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+overrides:
+  # typed-rest-client pins a vulnerable qs version; remove when upstream updates.
+  "typed-rest-client@2.3.1>qs": "6.16.0"
