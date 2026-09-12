@@ -141,6 +141,21 @@ end_of_record`);
     expect(record?.totals.functions).toMatchObject({ found: 2, hit: 2 });
   });
 
+  it("keeps Rust functions with a shared underscore suffix distinct", () => {
+    const [record] = parseLcov(`SF:src/lib.rs
+FN:10,_RNvCs123_4mine9read_file
+FN:10,_RNvCs456_4mine10write_file
+FNDA:5,_RNvCs123_4mine9read_file
+FNDA:0,_RNvCs456_4mine10write_file
+end_of_record`);
+
+    expect(record?.functions).toEqual([
+      { name: "_RNvCs123_4mine9read_file", line: 10, hits: 5 },
+      { name: "_RNvCs456_4mine10write_file", line: 10, hits: 0 },
+    ]);
+    expect(record?.totals.functions).toMatchObject({ found: 2, hit: 1 });
+  });
+
   it("prefers the executed Rust symbol name when collapsing duplicates", () => {
     const [record] = parseLcov(`TN:
 SF:src/lib.rs

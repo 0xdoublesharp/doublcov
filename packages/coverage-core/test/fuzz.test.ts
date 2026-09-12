@@ -11,6 +11,48 @@ const fuzzTimeoutMs = Math.max(5_000, fuzzRuns * 2);
 
 describe("coverage-core fuzz properties", () => {
   it(
+    "preserves every function and hit count in valid nonempty records",
+    () => {
+      fc.assert(
+        fc.property(
+          fc.array(fc.integer({ min: 0, max: 100 }), {
+            minLength: 1,
+            maxLength: 128,
+          }),
+          fc.boolean(),
+          (hits, hitsFirst) => {
+            const expected = hits.map((hitCount, index) => ({
+              name: `function_${index}`,
+              line: index + 1,
+              hits: hitCount,
+            }));
+            const definitions = expected.map(
+              (fn) => `FN:${fn.line},${fn.name}`,
+            );
+            const counts = expected.map((fn) => `FNDA:${fn.hits},${fn.name}`);
+            const records = parseLcov(
+              [
+                "SF:generated.js",
+                ...(hitsFirst
+                  ? [...counts, ...definitions]
+                  : [...definitions, ...counts]),
+                "end_of_record",
+              ].join("\n"),
+            );
+            expect(records).toHaveLength(1);
+            expect(records[0]?.functions).toEqual(expected);
+            expect(records[0]?.totals.functions).toMatchObject({
+              found: hits.length,
+              hit: hits.filter((count) => count > 0).length,
+            });
+          },
+        ),
+        { numRuns: fuzzRuns },
+      );
+    },
+    fuzzTimeoutMs,
+  );
+  it(
     "parseLcov never throws on arbitrary text",
     () => {
       fc.assert(

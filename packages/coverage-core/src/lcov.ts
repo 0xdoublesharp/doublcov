@@ -16,7 +16,11 @@ export interface LcovRecord {
 export function parseLcov(input: string): LcovRecord[] {
   const records: LcovRecord[] = [];
   let current = createRecord();
-  const functionLines = new Map<string, number>();
+  const functionsByName = new Map<string, FunctionDetail>();
+  const functionGroups = new Map<
+    number,
+    { line: number; detail?: FunctionDetail }
+  >();
   let pendingHits = new Map<string, number>();
 
   for (const rawLine of input.split(/\r?\n/)) {
@@ -27,7 +31,8 @@ export function parseLcov(input: string): LcovRecord[] {
       flushPendingHits(current, pendingHits);
       if (current.sourceFile) records.push(finalizeRecord(current));
       current = createRecord();
-      functionLines.clear();
+      functionsByName.clear();
+      functionGroups.clear();
       pendingHits = new Map();
       continue;
     }
@@ -44,7 +49,8 @@ export function parseLcov(input: string): LcovRecord[] {
           flushPendingHits(current, pendingHits);
           records.push(finalizeRecord(current));
           current = createRecord();
-          functionLines.clear();
+          functionsByName.clear();
+          functionGroups.clear();
           pendingHits = new Map();
         }
         current.sourceFile = value;
@@ -58,21 +64,57 @@ export function parseLcov(input: string): LcovRecord[] {
         }
         break;
       }
-      case "FN":
-      case "FNA": {
+      case "FN": {
         const [lineNumber, rawName] = splitOnce(value, ",");
         const parsedLine = parsePositiveInteger(lineNumber);
-        const name = rawName.trim();
+        const [possibleEndLine, remainingName] = splitOnce(rawName, ",");
+        const name = (
+          rawName.includes(",") &&
+          parsePositiveInteger(possibleEndLine) !== null
+            ? remainingName
+            : rawName
+        ).trim();
         if (parsedLine !== null && name) {
-          functionLines.set(name, parsedLine);
-          const existing = current.functions.find((fn) => fn.name === name);
+          const existing = functionsByName.get(name);
           if (existing) {
             existing.line = parsedLine;
           } else {
             const hits = pendingHits.get(name) ?? 0;
             pendingHits.delete(name);
-            current.functions.push({ name, line: parsedLine, hits });
+            const detail = { name, line: parsedLine, hits };
+            current.functions.push(detail);
+            functionsByName.set(name, detail);
           }
+        }
+        break;
+      }
+      case "FNL": {
+        const [index, lineNumber] = value.split(",");
+        const parsedIndex = parseNonNegativeInteger(index);
+        const parsedLine = parsePositiveInteger(lineNumber);
+        if (parsedIndex !== null && parsedLine !== null) {
+          functionGroups.set(parsedIndex, { line: parsedLine });
+        }
+        break;
+      }
+      case "FNA": {
+        const [index, remainder] = splitOnce(value, ",");
+        const [hits, rawName] = splitOnce(remainder, ",");
+        const parsedIndex = parseNonNegativeInteger(index);
+        const parsedHits = parseNonNegativeInteger(hits);
+        const name = rawName.trim();
+        if (parsedIndex === null || parsedHits === null || !name) break;
+        const group = functionGroups.get(parsedIndex);
+        if (!group) break;
+        // LCOV 2.2 counts function groups, not their individual aliases.
+        if (group.detail) {
+          if (group.detail.hits === 0 && parsedHits > 0) {
+            group.detail.name = name;
+          }
+          group.detail.hits += parsedHits;
+        } else {
+          group.detail = { name, line: group.line, hits: parsedHits };
+          current.functions.push(group.detail);
         }
         break;
       }
@@ -81,7 +123,7 @@ export function parseLcov(input: string): LcovRecord[] {
         const name = rawName.trim();
         const parsedHits = parseNonNegativeInteger(hits);
         if (!name || parsedHits === null) break;
-        const existing = current.functions.find((fn) => fn.name === name);
+        const existing = functionsByName.get(name);
         if (existing) {
           existing.hits = parsedHits;
         } else {
@@ -200,7 +242,7 @@ export function collapseDuplicateFunctions(
 // bytes, then an optional `Cs<base62>_` crate disambiguator. Stripping the
 // disambiguator yields a stable identity across monomorphizations of the
 // same source path.
-const RUST_V0_DISAMBIGUATOR = /^(_R[a-zA-Z]*)Cs[0-9A-Za-z_]+_/;
+const RUST_V0_DISAMBIGUATOR = /^(_R[a-zA-Z]*)Cs[0-9A-Za-z]*_/;
 
 function functionIdentity(name: string): string {
   const match = RUST_V0_DISAMBIGUATOR.exec(name);
