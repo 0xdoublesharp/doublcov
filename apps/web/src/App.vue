@@ -56,6 +56,8 @@ const uncoveredOnly = ref(true);
 const navigatorCurrentFileOnly = ref(true);
 const currentUncoveredIndex = ref(0);
 const sourceCache = ref<Record<string, SourceFilePayload>>({});
+const sourceRequests = new Map<string, Promise<void>>();
+let sourceSelectionRequestId = 0;
 const sourceWindowStart = ref(1);
 const sourceScroller = ref<HTMLElement | null>(null);
 const navigatorScroller = ref<HTMLElement | null>(null);
@@ -82,6 +84,7 @@ const sourceError = ref<string | null>(null);
 const helpOpen = ref(false);
 const highlightedSourceTokens = ref<Record<number, SyntaxToken[]>>({});
 const highlightRequestId = ref(0);
+let sourceHighlightController: AbortController | undefined;
 const navigatorRowHeight = 74;
 const navigatorOverscan = 6;
 let embeddedSources: Record<string, unknown> | null | undefined;
@@ -269,6 +272,7 @@ const selectedUncoveredRange = computed(() => {
 });
 const visibleSourceHighlightKey = computed(() =>
   [
+    selectedFileId.value,
     selectedFile.value?.path ?? selectedFile.value?.displayPath ?? "",
     theme.value,
     selectedThemeMode.value,
@@ -303,17 +307,13 @@ onMounted(async () => {
   }
   if (selectedLine.value)
     sourceWindowStart.value = Math.max(1, selectedLine.value - 120);
-  sourceError.value = null;
-  try {
-    await loadSelectedSource();
-    await scrollToSelectedLine();
-  } catch (caught) {
-    sourceError.value =
-      caught instanceof Error ? caught.message : String(caught);
-  }
+  await refreshSelectedSource();
 });
 
 onBeforeUnmount(() => {
+  sourceSelectionRequestId += 1;
+  highlightRequestId.value += 1;
+  sourceHighlightController?.abort();
   window.removeEventListener("keydown", onKeyboardShortcut);
   window.removeEventListener("mousemove", handleNavigatorResizeMove);
   window.removeEventListener("mousemove", handleSidePanelResizeMove);
@@ -375,15 +375,7 @@ watch(selectedFileId, () => {
 
 watch(selectedFileId, async () => {
   sourceWindowStart.value = Math.max(1, (selectedLine.value ?? 1) - 120);
-  sourceError.value = null;
-  try {
-    await loadSelectedSource();
-  } catch (caught) {
-    sourceError.value =
-      caught instanceof Error ? caught.message : String(caught);
-    return;
-  }
-  await scrollToSelectedLine();
+  await refreshSelectedSource();
 });
 
 watch(selectedLine, async () => {
@@ -440,26 +432,48 @@ function cycleTheme(): void {
 async function loadSelectedSource(): Promise<void> {
   const file = selectedFile.value;
   if (!file || sourceCache.value[file.id]) return;
-  const embeddedPayload = readEmbeddedSourcePayload(file.sourceDataPath);
-  if (embeddedPayload !== undefined) {
+  const existing = sourceRequests.get(file.id);
+  if (existing) return existing;
+
+  const pending = (async () => {
+    let payload = readEmbeddedSourcePayload(file.sourceDataPath);
+    if (payload === undefined) {
+      const response = await fetch(file.sourceDataPath);
+      if (!response.ok)
+        throw new Error(`Could not load source for ${file.path}.`);
+      payload = await response.json();
+    }
     sourceCache.value = {
       ...sourceCache.value,
-      [file.id]: parseSourcePayload(embeddedPayload, file.path, {
+      [file.id]: parseSourcePayload(payload, file.path, {
         id: file.id,
         path: file.path,
       }),
     };
+  })();
+  sourceRequests.set(file.id, pending);
+  try {
+    await pending;
+  } finally {
+    sourceRequests.delete(file.id);
+  }
+}
+
+async function refreshSelectedSource(): Promise<void> {
+  const requestId = ++sourceSelectionRequestId;
+  const fileId = selectedFileId.value;
+  const isCurrent = () =>
+    requestId === sourceSelectionRequestId && fileId === selectedFileId.value;
+  sourceError.value = null;
+  try {
+    await loadSelectedSource();
+  } catch (caught) {
+    if (isCurrent())
+      sourceError.value =
+        caught instanceof Error ? caught.message : String(caught);
     return;
   }
-  const response = await fetch(file.sourceDataPath);
-  if (!response.ok) throw new Error(`Could not load source for ${file.path}.`);
-  sourceCache.value = {
-    ...sourceCache.value,
-    [file.id]: parseSourcePayload(await response.json(), file.path, {
-      id: file.id,
-      path: file.path,
-    }),
-  };
+  if (isCurrent()) await scrollToSelectedLine();
 }
 
 async function readReportPayload(): Promise<unknown> {
@@ -484,33 +498,28 @@ async function selectFile(
   selectedFileId.value = fileId;
   selectedLine.value = line;
   if (line) sourceWindowStart.value = Math.max(1, line - 120);
-  sourceError.value = null;
-  try {
-    await loadSelectedSource();
-  } catch (caught) {
-    sourceError.value =
-      caught instanceof Error ? caught.message : String(caught);
-    return;
-  }
-  await scrollToSelectedLine(line);
+  await refreshSelectedSource();
 }
 
 async function refreshHighlightedSourceLines(): Promise<void> {
+  sourceHighlightController?.abort();
+  const controller = new AbortController();
+  sourceHighlightController = controller;
   const requestId = highlightRequestId.value + 1;
   highlightRequestId.value = requestId;
+  highlightedSourceTokens.value = {};
   const lines = visibleSourceLines.value;
   const filePath =
     selectedFile.value?.path ?? selectedFile.value?.displayPath ?? "";
 
-  if (!lines.length) {
-    highlightedSourceTokens.value = {};
-    return;
-  }
+  if (!lines.length) return;
 
   const tokenRows = await highlightSourceLines(
-    lines.map((line) => line.text),
+    sourcePayload.value?.lines ?? [],
     filePath,
     selectedThemeMode.value,
+    { start: lines[0]!.number - 1, end: lines.at(-1)!.number },
+    controller.signal,
   );
   if (highlightRequestId.value !== requestId) return;
 
@@ -519,6 +528,15 @@ async function refreshHighlightedSourceLines(): Promise<void> {
       line.number,
       tokenRows[index] ?? highlightSourceLine(line.text, filePath),
     ]),
+  );
+}
+
+function pageSourceWindow(direction: -1 | 1): void {
+  const start = visibleSourceLines.value[0]?.number ?? 1;
+  const lastStart = Math.max(1, (sourcePayload.value?.lines.length ?? 0) - 399);
+  sourceWindowStart.value = Math.min(
+    lastStart,
+    Math.max(1, start + direction * 400),
   );
 }
 
@@ -745,8 +763,16 @@ async function scrollToSelectedLine(
   lineNumber = selectedLine.value,
 ): Promise<void> {
   if (!lineNumber) return;
+  const fileId = selectedFileId.value;
+  const requestId = sourceSelectionRequestId;
   await nextTick();
   await nextTick();
+  if (
+    fileId !== selectedFileId.value ||
+    lineNumber !== selectedLine.value ||
+    requestId !== sourceSelectionRequestId
+  )
+    return;
 
   const target = document.getElementById(`L${lineNumber}`);
   if (!target) return;
@@ -1158,18 +1184,10 @@ function readStoredSidePanelWidth(panel: "left" | "right"): number {
               class="border-b border-[var(--border)] bg-[var(--panel-soft)] px-3 py-2 text-sm"
             >
               Showing a 400-line window for responsiveness.
-              <button
-                class="ml-2 underline"
-                @click="
-                  sourceWindowStart = Math.max(1, sourceWindowStart - 400)
-                "
-              >
+              <button class="ml-2 underline" @click="pageSourceWindow(-1)">
                 Previous window
               </button>
-              <button
-                class="ml-2 underline"
-                @click="sourceWindowStart = sourceWindowStart + 400"
-              >
+              <button class="ml-2 underline" @click="pageSourceWindow(1)">
                 Next window
               </button>
             </div>

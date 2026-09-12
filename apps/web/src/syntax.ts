@@ -86,6 +86,24 @@ const maxCacheEntries = 12000;
 const tokenCache = new Map<string, SyntaxToken[]>();
 type ShikiHighlighter = Awaited<ReturnType<typeof createHighlighterCore>>;
 
+type ShikiGrammarState = NonNullable<
+  ReturnType<ShikiHighlighter["codeToTokens"]>["grammarState"]
+>;
+interface SourceHighlightCache {
+  lines: string[];
+  filePath: string;
+  theme: "light" | "dark";
+  checkpoints: Map<number, ShikiGrammarState>;
+  windows: Map<string, SyntaxToken[][]>;
+}
+// Source payload arrays are immutable. Identity also isolates replacement reports
+// that reuse a path. Keep recent files/themes, grammar states, and rows bounded.
+const sourceHighlightCaches: SourceHighlightCache[] = [];
+const maxSourceHighlightCaches = 4;
+const maxGrammarCheckpoints = 128;
+const maxHighlightWindows = 8;
+const highlightChunkSize = 400;
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- used via `typeof` below to derive the ShikiLanguage union
 const shikiLanguages = [
   "bash",
@@ -258,17 +276,39 @@ export function highlightSourceLine(
   return tokens;
 }
 
+// A range uses zero-based, end-exclusive offsets into the complete immutable source.
 export async function highlightSourceLines(
   lines: string[],
   filePath: string,
   theme: "light" | "dark",
+  range?: { start: number; end: number },
+  signal?: AbortSignal,
 ): Promise<SyntaxToken[][]> {
+  if (signal?.aborted) return [];
+  const start = Math.max(0, Math.min(lines.length, range?.start ?? 0));
+  const end = Math.max(
+    start,
+    Math.min(lines.length, range?.end ?? lines.length),
+  );
+  const visibleLines = lines.slice(start, end);
   const language = detectShikiLanguage(filePath);
   if (!language)
-    return lines.map((line) => highlightSourceLine(line, filePath));
+    return visibleLines.map((line) => highlightSourceLine(line, filePath));
 
   try {
     const highlighter = await getHighlighter();
+    if (signal?.aborted) return [];
+    if (range)
+      return await highlightSourceWindow(
+        highlighter,
+        lines,
+        filePath,
+        language,
+        theme,
+        start,
+        end,
+        signal,
+      );
     const result = highlighter.codeToTokens(lines.join("\n"), {
       lang: language,
       theme: theme === "dark" ? "github-dark" : "github-light",
@@ -280,8 +320,110 @@ export async function highlightSourceLines(
         : highlightSourceLine(line, filePath);
     });
   } catch {
-    return lines.map((line) => highlightSourceLine(line, filePath));
+    return visibleLines.map((line) => highlightSourceLine(line, filePath));
   }
+}
+
+async function highlightSourceWindow(
+  highlighter: ShikiHighlighter,
+  lines: string[],
+  filePath: string,
+  language: ShikiLanguage,
+  theme: "light" | "dark",
+  start: number,
+  end: number,
+  signal?: AbortSignal,
+): Promise<SyntaxToken[][]> {
+  if (start === end) return [];
+  const cacheIndex = sourceHighlightCaches.findIndex(
+    (entry) =>
+      entry.lines === lines &&
+      entry.filePath === filePath &&
+      entry.theme === theme,
+  );
+  const cache =
+    cacheIndex < 0
+      ? {
+          lines,
+          filePath,
+          theme,
+          checkpoints: new Map<number, ShikiGrammarState>(),
+          windows: new Map<string, SyntaxToken[][]>(),
+        }
+      : sourceHighlightCaches.splice(cacheIndex, 1)[0]!;
+  sourceHighlightCaches.push(cache);
+  if (sourceHighlightCaches.length > maxSourceHighlightCaches)
+    sourceHighlightCaches.shift();
+
+  const windowKey = `${start}:${end}`;
+  const cached = cache.windows.get(windowKey);
+  if (cached) {
+    rememberBounded(cache.windows, windowKey, cached, maxHighlightWindows);
+    return cached;
+  }
+
+  let cursor = 0;
+  let grammarState: ShikiGrammarState | undefined;
+  for (const [line, state] of cache.checkpoints) {
+    if (line <= start && line > cursor) {
+      cursor = line;
+      grammarState = state;
+    }
+  }
+  if (grammarState)
+    rememberBounded(
+      cache.checkpoints,
+      cursor,
+      grammarState,
+      maxGrammarCheckpoints,
+    );
+  const tokenize = (from: number, to: number) => {
+    const result = highlighter.codeToTokens(lines.slice(from, to).join("\n"), {
+      lang: language,
+      theme: theme === "dark" ? "github-dark" : "github-light",
+      ...(grammarState ? { grammarState } : {}),
+    });
+    grammarState = result.grammarState;
+    if (grammarState)
+      rememberBounded(
+        cache.checkpoints,
+        to,
+        grammarState,
+        maxGrammarCheckpoints,
+      );
+    return result.tokens;
+  };
+  // Scan a previously unseen prefix once in chunks, then resume from the nearest
+  // saved grammar state on later navigation. Prefix tokens are never rendered.
+  while (cursor < start) {
+    const next = Math.min(start, cursor + highlightChunkSize);
+    tokenize(cursor, next);
+    cursor = next;
+    // Allow source fallback paint, input, and cancellation between prefix chunks.
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    if (signal?.aborted) return [];
+  }
+  const tokens = tokenize(start, end);
+  const rows = lines.slice(start, end).map((line, index) => {
+    const row = tokens[index] ?? [];
+    return row.length > 0
+      ? row.map(shikiTokenToSyntaxToken)
+      : highlightSourceLine(line, filePath);
+  });
+  if (end - start <= 800)
+    rememberBounded(cache.windows, windowKey, rows, maxHighlightWindows);
+  return rows;
+}
+
+function rememberBounded<K, V>(
+  cache: Map<K, V>,
+  key: K,
+  value: V,
+  limit: number,
+): void {
+  cache.delete(key);
+  cache.set(key, value);
+  if (cache.size > limit) cache.delete(cache.keys().next().value!);
 }
 
 function getHighlighter(): Promise<ShikiHighlighter> {

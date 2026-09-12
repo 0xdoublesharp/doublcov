@@ -8,8 +8,15 @@ import App from "../src/App.vue";
 
 vi.mock("../src/syntax", () => ({
   highlightSourceLine: (text: string) => [{ text, kind: undefined }],
-  highlightSourceLines: async (lines: string[]) =>
-    lines.map((text) => [{ text, kind: undefined }]),
+  highlightSourceLines: async (
+    lines: string[],
+    _path: string,
+    _theme: string,
+    range?: { start: number; end: number },
+  ) =>
+    lines
+      .slice(range?.start ?? 0, range?.end)
+      .map((text) => [{ text, kind: undefined }]),
 }));
 
 export interface MinimalPayload {
