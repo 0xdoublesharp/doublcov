@@ -19,7 +19,7 @@ export function parseLcov(input: string): LcovRecord[] {
   const functionsByName = new Map<string, FunctionDetail>();
   const functionGroups = new Map<
     number,
-    { line: number; detail?: FunctionDetail }
+    { line: number; endLine?: number; detail?: FunctionDetail }
   >();
   let pendingHits = new Map<string, number>();
 
@@ -68,20 +68,26 @@ export function parseLcov(input: string): LcovRecord[] {
         const [lineNumber, rawName] = splitOnce(value, ",");
         const parsedLine = parsePositiveInteger(lineNumber);
         const [possibleEndLine, remainingName] = splitOnce(rawName, ",");
-        const name = (
-          rawName.includes(",") &&
-          parsePositiveInteger(possibleEndLine) !== null
-            ? remainingName
-            : rawName
-        ).trim();
+        const endLine = rawName.includes(",")
+          ? parsePositiveInteger(possibleEndLine)
+          : null;
+        const name = (endLine !== null ? remainingName : rawName).trim();
         if (parsedLine !== null && name) {
           const existing = functionsByName.get(name);
           if (existing) {
             existing.line = parsedLine;
+            if (endLine !== null && endLine >= parsedLine)
+              existing.endLine = endLine;
+            else delete existing.endLine;
           } else {
             const hits = pendingHits.get(name) ?? 0;
             pendingHits.delete(name);
-            const detail = { name, line: parsedLine, hits };
+            const detail = {
+              name,
+              line: parsedLine,
+              hits,
+              ...(endLine !== null && endLine >= parsedLine ? { endLine } : {}),
+            };
             current.functions.push(detail);
             functionsByName.set(name, detail);
           }
@@ -89,11 +95,15 @@ export function parseLcov(input: string): LcovRecord[] {
         break;
       }
       case "FNL": {
-        const [index, lineNumber] = value.split(",");
+        const [index, lineNumber, lastLine] = value.split(",");
         const parsedIndex = parseNonNegativeInteger(index);
         const parsedLine = parsePositiveInteger(lineNumber);
+        const endLine = parsePositiveInteger(lastLine);
         if (parsedIndex !== null && parsedLine !== null) {
-          functionGroups.set(parsedIndex, { line: parsedLine });
+          functionGroups.set(parsedIndex, {
+            line: parsedLine,
+            ...(endLine !== null && endLine >= parsedLine ? { endLine } : {}),
+          });
         }
         break;
       }
@@ -112,8 +122,15 @@ export function parseLcov(input: string): LcovRecord[] {
             group.detail.name = name;
           }
           group.detail.hits += parsedHits;
+          group.detail.aliases!.push(name);
         } else {
-          group.detail = { name, line: group.line, hits: parsedHits };
+          group.detail = {
+            name,
+            line: group.line,
+            ...(group.endLine !== undefined ? { endLine: group.endLine } : {}),
+            aliases: [name],
+            hits: parsedHits,
+          };
           current.functions.push(group.detail);
         }
         break;
@@ -224,15 +241,25 @@ export function collapseDuplicateFunctions(
 ): FunctionDetail[] {
   const byKey = new Map<string, FunctionDetail>();
   for (const fn of functions) {
-    const key = `${fn.line}\u0000${functionIdentity(fn.name)}`;
+    const identity = fn.aliases
+      ? "group"
+      : `function:${functionIdentity(fn.name)}`;
+    const key = `${fn.line}\u0000${identity}`;
     const existing = byKey.get(key);
     if (existing) {
       existing.hits += fn.hits;
       // Prefer a name with non-zero hits so the rendered label reflects the
       // monomorphization that actually executed.
       if (existing.hits === fn.hits && fn.hits > 0) existing.name = fn.name;
+      if (fn.aliases)
+        existing.aliases = [...new Set([...existing.aliases!, ...fn.aliases])];
+      if (fn.endLine !== undefined)
+        existing.endLine = Math.max(existing.endLine ?? fn.endLine, fn.endLine);
     } else {
-      byKey.set(key, { ...fn });
+      byKey.set(key, {
+        ...fn,
+        ...(fn.aliases ? { aliases: [...fn.aliases] } : {}),
+      });
     }
   }
   return [...byKey.values()];

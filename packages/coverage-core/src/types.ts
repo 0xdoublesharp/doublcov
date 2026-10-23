@@ -1,9 +1,5 @@
 export type CoverageStatus =
-  | "covered"
-  | "partial"
-  | "uncovered"
-  | "ignored"
-  | "neutral";
+  "covered" | "partial" | "uncovered" | "ignored" | "neutral";
 
 export interface CoverageTotals {
   found: number;
@@ -23,6 +19,8 @@ export interface FunctionDetail {
   name: string;
   line: number;
   endLine?: number;
+  /** Aliases of an LCOV 2.2 function group, identified by its source line. */
+  aliases?: string[];
   hits: number;
 }
 
@@ -171,10 +169,7 @@ export type CoverageThemeToken =
   | "syn-punctuation";
 
 export type CoverageUiHook =
-  | "report:header"
-  | "report:summary"
-  | "file:toolbar"
-  | "sidebar:panel";
+  "report:header" | "report:summary" | "file:toolbar" | "sidebar:panel";
 
 export interface CoverageHookContribution {
   id: string;

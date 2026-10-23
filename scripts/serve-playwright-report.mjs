@@ -29,6 +29,9 @@ await mkdir(reportDir, { recursive: true });
 await run(process.execPath, [
   cliPath,
   "build",
+  "--mode",
+  "static",
+  "--no-open",
   "--lcov",
   path.join(repoRoot, "fixtures/simple/lcov.info"),
   "--sources",

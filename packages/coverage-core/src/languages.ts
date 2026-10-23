@@ -129,34 +129,56 @@ export function detectIgnoredLines(
 }
 
 function detectSolidityAssemblyLines(lines: string[]): IgnoredLine[] {
-  const ignoredLines: IgnoredLine[] = [];
+  const ignoredLines = new Set<number>();
+  const code = stripStringsAndComments(lines.join("\n"));
+  const tokens = /(?<![\w$])assembly(?![\w$])\s*(?:\([^)]*\)\s*)?\{|[{}]|\n/g;
   let depth = 0;
-  let inAssembly = false;
+  let line = 1;
+  let startLine = 1;
+  let startOffset = 0;
+  let previousEnd = 0;
+  const outsideAssembly: string[] = [];
 
-  for (const [index, text] of lines.entries()) {
-    const lineNumber = index + 1;
-    const stripped = stripStringsAndComments(text);
+  const finishAssembly = (endOffset: number): void => {
+    for (let current = startLine; current <= line; current += 1)
+      ignoredLines.add(current);
+    outsideAssembly.push(
+      code.slice(previousEnd, startOffset),
+      "\n".repeat(line - startLine),
+    );
+    previousEnd = endOffset;
+  };
 
-    if (!inAssembly && /\bassembly(?:\s*\([^)]*\))?\s*\{/.test(stripped)) {
-      inAssembly = true;
-      depth = 0;
-    }
-
-    if (inAssembly) {
-      ignoredLines.push({
-        line: lineNumber,
-        reason: "solidity-assembly",
-        label: "Solidity assembly",
-      });
-      depth += countChar(stripped, "{") - countChar(stripped, "}");
-      if (depth <= 0) {
-        inAssembly = false;
-        depth = 0;
+  for (const match of code.matchAll(tokens)) {
+    const token = match[0];
+    if (token === "\n") {
+      line += 1;
+    } else if (token.endsWith("{")) {
+      if (depth === 0 && token !== "{") {
+        startLine = line;
+        startOffset = match.index;
+        depth = 1;
+      } else if (depth > 0) {
+        depth += 1;
       }
+      line += token.split("\n").length - 1;
+    } else if (depth > 0 && --depth === 0) {
+      finishAssembly(match.index + token.length);
     }
   }
+  if (depth > 0) finishAssembly(code.length);
+  outsideAssembly.push(code.slice(previousEnd));
+  const remainingLines = outsideAssembly.join("").split("\n");
 
-  return ignoredLines;
+  // A line that also contains Solidity must keep its line, function, and
+  // branch coverpoints; an assembly exclusion cannot describe only part of it.
+  return [...ignoredLines]
+    .filter((line) => !remainingLines[line - 1]?.trim())
+    .map((line) => ({
+      line,
+      reason: "solidity-assembly",
+      label: "Solidity assembly",
+    }));
 }
 
 function extensionForPath(filePath: string): string {
@@ -170,34 +192,41 @@ function normalizeExtension(extension: string): string {
   return trimmed.startsWith(".") ? trimmed : `.${trimmed}`;
 }
 
-function stripStringsAndComments(line: string): string {
-  // Strip out double- and single-quoted string literals (with backslash escapes)
-  // and trailing line comments so brace-tracking only sees real code.
+function stripStringsAndComments(input: string): string {
+  // Keep newlines and token boundaries so multiline headers and comments do
+  // not change line numbers or turn ordinary Solidity into assembly.
   let result = "";
-  let index = 0;
-  while (index < line.length) {
-    const char = line[index];
-    if (char === "/" && line[index + 1] === "/") break;
-    if (char === '"' || char === "'") {
-      const quote = char;
-      index += 1;
-      while (index < line.length && line[index] !== quote) {
-        if (line[index] === "\\" && index + 1 < line.length) {
-          index += 2;
-          continue;
-        }
+  let state: "code" | "line-comment" | "block-comment" | '"' | "'" = "code";
+  for (let index = 0; index < input.length; index += 1) {
+    const char = input[index]!;
+    const next = input[index + 1];
+    if (char === "\n") {
+      result += char;
+      if (state === "line-comment") state = "code";
+    } else if (state === "line-comment") {
+      continue;
+    } else if (state === "block-comment") {
+      if (char === "*" && next === "/") {
+        state = "code";
         index += 1;
       }
-      // Skip the closing quote (if present) without emitting it.
-      if (index < line.length) index += 1;
-      continue;
+    } else if (state !== "code") {
+      if (char === "\\" && next !== undefined) {
+        if (next === "\n") result += "\n";
+        index += 1;
+      } else if (char === state) {
+        state = "code";
+      }
+    } else if (char === "/" && (next === "/" || next === "*")) {
+      state = next === "/" ? "line-comment" : "block-comment";
+      result += " ";
+      index += 1;
+    } else if (char === '"' || char === "'") {
+      state = char;
+      result += " ";
+    } else {
+      result += char;
     }
-    result += char;
-    index += 1;
   }
   return result;
-}
-
-function countChar(value: string, char: string): number {
-  return [...value].filter((candidate) => candidate === char).length;
 }

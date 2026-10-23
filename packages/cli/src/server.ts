@@ -1,4 +1,5 @@
-import { createReadStream, promises as fs } from "node:fs";
+import { promises as fs } from "node:fs";
+import { pipeline } from "node:stream/promises";
 import { createServer, type ServerResponse } from "node:http";
 import { spawn } from "node:child_process";
 import { platform } from "node:os";
@@ -179,9 +180,19 @@ export async function serveRequest(
       response.end(injectServerLeasePrompt(html, root));
       return;
     }
-    response.writeHead(200, headers);
-    createReadStream(realTarget).pipe(response);
+    const file = await fs.open(realTarget, "r");
+    try {
+      response.writeHead(200, headers);
+      await pipeline(file.createReadStream(), response);
+    } finally {
+      await file.close();
+    }
   } catch (error) {
+    if (response.destroyed) return;
+    if (response.headersSent) {
+      response.destroy();
+      return;
+    }
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       sendText(response, 404, "Not found");
       return;

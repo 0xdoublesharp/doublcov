@@ -2,6 +2,35 @@ import { describe, expect, it } from "vitest";
 import { buildCoverageBundle } from "../src/report.js";
 
 describe("buildCoverageBundle duplicate LCOV records", () => {
+  it.each([false, true])(
+    "merges function groups when the executed alias and group index change, reversed: %s",
+    (reverse) => {
+      const records = [
+        "SF:main.cpp\nFNL:0,10,20\nFNA:0,0,example<int>\nFNA:0,2,example<bool>\nDA:10,1\nend_of_record",
+        "SF:main.cpp\nFNL:7,10,20\nFNA:7,0,example<int>\nFNA:7,0,example<bool>\nDA:10,1\nend_of_record",
+        "SF:main.cpp\nFNL:3,10,20\nFNA:3,3,example<double>\nDA:10,1\nend_of_record",
+      ];
+      const { report } = buildCoverageBundle({
+        lcov: (reverse ? records.reverse() : records).join("\n"),
+        sourceFiles: [],
+      });
+      expect(report.totals.functions).toEqual({
+        found: 1,
+        hit: 1,
+        percent: 100,
+      });
+      expect(report.files[0]?.functions).toHaveLength(1);
+      expect(report.files[0]?.functions[0]).toMatchObject({
+        line: 10,
+        endLine: 20,
+        hits: 5,
+      });
+      expect(
+        report.uncoveredItems.filter((item) => item.kind === "function"),
+      ).toEqual([]);
+    },
+  );
+
   it("merges duplicate LCOV records for the same source path", () => {
     const bundle = buildCoverageBundle({
       lcov: `TN:

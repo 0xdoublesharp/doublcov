@@ -19,6 +19,7 @@ import {
   onBeforeUnmount,
   onMounted,
   ref,
+  shallowReactive,
   watch,
 } from "vue";
 import {
@@ -55,7 +56,7 @@ const search = ref("");
 const uncoveredOnly = ref(true);
 const navigatorCurrentFileOnly = ref(true);
 const currentUncoveredIndex = ref(0);
-const sourceCache = ref<Record<string, SourceFilePayload>>({});
+const sourceCache = shallowReactive(new Map<string, SourceFilePayload>());
 const sourceRequests = new Map<string, Promise<void>>();
 let sourceSelectionRequestId = 0;
 const sourceWindowStart = ref(1);
@@ -133,7 +134,7 @@ const reportTitle = computed(() => {
   return projectName ? `${projectName} Coverage` : "Doublcov";
 });
 const sourcePayload = computed(() =>
-  selectedFileId.value ? sourceCache.value[selectedFileId.value] : null,
+  selectedFileId.value ? sourceCache.get(selectedFileId.value) : null,
 );
 const lineCoverage = computed(() => {
   const byLine = new Map<number, SourceFileCoverage["lines"][number]>();
@@ -289,6 +290,7 @@ function onKeyboardShortcut(event: KeyboardEvent): void {
 onMounted(async () => {
   applyTheme();
   window.addEventListener("keydown", onKeyboardShortcut);
+  window.addEventListener("hashchange", readHashState);
   window.addEventListener("mousemove", handleNavigatorResizeMove);
   window.addEventListener("mousemove", handleSidePanelResizeMove);
   window.addEventListener("mouseup", stopNavigatorResize);
@@ -315,6 +317,7 @@ onBeforeUnmount(() => {
   highlightRequestId.value += 1;
   sourceHighlightController?.abort();
   window.removeEventListener("keydown", onKeyboardShortcut);
+  window.removeEventListener("hashchange", readHashState);
   window.removeEventListener("mousemove", handleNavigatorResizeMove);
   window.removeEventListener("mousemove", handleSidePanelResizeMove);
   window.removeEventListener("mouseup", stopNavigatorResize);
@@ -431,7 +434,7 @@ function cycleTheme(): void {
 
 async function loadSelectedSource(): Promise<void> {
   const file = selectedFile.value;
-  if (!file || sourceCache.value[file.id]) return;
+  if (!file || sourceCache.has(file.id)) return;
   const existing = sourceRequests.get(file.id);
   if (existing) return existing;
 
@@ -443,13 +446,13 @@ async function loadSelectedSource(): Promise<void> {
         throw new Error(`Could not load source for ${file.path}.`);
       payload = await response.json();
     }
-    sourceCache.value = {
-      ...sourceCache.value,
-      [file.id]: parseSourcePayload(payload, file.path, {
+    sourceCache.set(
+      file.id,
+      parseSourcePayload(payload, file.path, {
         id: file.id,
         path: file.path,
       }),
-    };
+    );
   })();
   sourceRequests.set(file.id, pending);
   try {
@@ -844,8 +847,12 @@ function highlightedLine(line: {
 
 function readHashState(): void {
   const state = parseHashState(location.hash);
-  selectedFileId.value = state.selectedFileId;
-  selectedLine.value = state.selectedLine;
+  const invalidFile =
+    report.value && !filesById.value.has(state.selectedFileId);
+  selectedFileId.value = invalidFile
+    ? (report.value!.files[0]?.id ?? "")
+    : state.selectedFileId;
+  selectedLine.value = invalidFile ? null : state.selectedLine;
   selectedKind.value = state.selectedKind;
   search.value = state.search;
   uncoveredOnly.value = state.uncoveredOnly;

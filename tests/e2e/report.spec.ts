@@ -78,6 +78,26 @@ test("renders a generated report and navigates to uncovered source", async ({
   await expect(page.locator("#L10")).toContainText("} else {");
 });
 
+test("follows fragment navigation and browser back without reloading the report", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.locator("#L10")).toBeVisible();
+  await page.evaluate(() => {
+    const params = new URLSearchParams(location.hash.slice(1));
+    params.set("line", "10");
+    location.hash = params.toString();
+  });
+  await expect(page.locator("#L10")).toHaveClass(/selected-uncovered-section/);
+  await page.goBack();
+  await expect(page.locator("#L10")).not.toHaveClass(
+    /selected-uncovered-section/,
+  );
+  await expect(
+    page.getByRole("heading", { name: "src/Counter.sol" }),
+  ).toBeVisible();
+});
+
 test("sanitizes untrusted report customization in the browser", async ({
   page,
 }) => {

@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it } from "vitest";
-import {
+import { beforeEach, describe, expect, it, vi } from "vitest";
+let {
   LANGUAGE_DEFINITIONS,
   detectIgnoredLines,
   detectSourceLanguage,
@@ -7,12 +7,20 @@ import {
   resolveLanguageDefinition,
   sourceExtensionsForLanguages,
   sourceLanguageLabel,
-} from "../src/languages.js";
+} = await import("../src/languages.js");
 
-const baseline = LANGUAGE_DEFINITIONS.slice();
-
-afterEach(() => {
-  LANGUAGE_DEFINITIONS.splice(0, LANGUAGE_DEFINITIONS.length, ...baseline);
+beforeEach(async () => {
+  // Restore the lookup maps as well as the exported definition list.
+  vi.resetModules();
+  ({
+    LANGUAGE_DEFINITIONS,
+    detectIgnoredLines,
+    detectSourceLanguage,
+    registerLanguageDefinition,
+    resolveLanguageDefinition,
+    sourceExtensionsForLanguages,
+    sourceLanguageLabel,
+  } = await import("../src/languages.js"));
 });
 
 describe("detectSourceLanguage", () => {

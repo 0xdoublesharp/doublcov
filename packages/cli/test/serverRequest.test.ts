@@ -50,7 +50,7 @@ async function fetchPath(
     const address = server.address() as AddressInfo;
     const url = `http://127.0.0.1:${address.port}${requestPath}`;
     return await new Promise((resolve, reject) => {
-      http
+      const request = http
         .get(url, (response) => {
           const chunks: Buffer[] = [];
           response.on("data", (chunk: Buffer) => chunks.push(chunk));
@@ -64,6 +64,9 @@ async function fetchPath(
           response.on("error", reject);
         })
         .on("error", reject);
+      request.setTimeout(1_000, () =>
+        request.destroy(new Error("Request timed out")),
+      );
     });
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
@@ -134,6 +137,26 @@ describe("serveRequest", () => {
   it("returns 404 for a missing file", async () => {
     const result = await fetchPath(reportRoot, makeState(), "/missing.html");
     expect(result.status).toBe(404);
+  });
+
+  it("returns 404 when an asset vanishes after stat and before opening the stream", async () => {
+    const target = path.join(reportRoot, "asset.js");
+    const realStat = fsPromises.stat.bind(fsPromises);
+    const spy = vi
+      .spyOn(fsPromises, "stat")
+      .mockImplementation(async (input, options) => {
+        const stat = await realStat(input, options);
+        if (String(input) === target) await rm(target);
+        return stat;
+      });
+    try {
+      const result = await fetchPath(reportRoot, makeState(), "/asset.js");
+      expect(result.status).toBe(404);
+      expect(result.body).toBe("Not found");
+      expect((await fetchPath(reportRoot, makeState(), "/")).status).toBe(200);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("returns 403 for a parent traversal attempt", async () => {

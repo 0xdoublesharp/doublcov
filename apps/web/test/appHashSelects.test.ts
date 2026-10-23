@@ -8,6 +8,39 @@ import {
 } from "./appTestHelpers";
 
 describe("App.vue hash state with non-default filters", () => {
+  it("updates source, line selection, and filters when the URL fragment changes", async () => {
+    embedPayload(buildMultiFilePayload(3));
+    const w = await mountApp();
+    expect(w.find("h2").text()).toBe("src/mod0/file.ts");
+    history.replaceState(
+      null,
+      "",
+      "#file=f0001-mod-1&line=2&q=mod1&uncovered=0&navFile=0&kind=function",
+    );
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    await flushPromises();
+    await flushPromises();
+
+    expect(w.find("h2").text()).toBe("src/mod1/file.ts");
+    expect(w.find("#L2").classes()).toContain("selected-uncovered-section");
+    expect(
+      w.find<HTMLInputElement>('[data-search-input="true"]').element.value,
+    ).toBe("mod1");
+    expect(
+      w.find<HTMLSelectElement>('select.focus-ring[class*="mt-3"]').element
+        .value,
+    ).toBe("function");
+
+    history.replaceState(null, "", "#file=missing&line=999");
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    await flushPromises();
+    await flushPromises();
+    expect(w.find("h2").text()).toBe("src/mod0/file.ts");
+    expect(w.find(".selected-line, .selected-uncovered-section").exists()).toBe(
+      false,
+    );
+  });
+
   it("loads search/uncoveredOnly/navFile flags from the hash on mount", async () => {
     embedPayload(buildMultiFilePayload(3));
     history.replaceState(

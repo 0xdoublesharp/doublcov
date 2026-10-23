@@ -6,11 +6,13 @@ import {
   readFile,
   realpath,
   rm,
+  symlink,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import {
+  copyDirectory,
   readJsonIfPresent,
   readTextIfPresent,
   writeJsonAtomic,
@@ -20,6 +22,21 @@ let tempRoot: string;
 
 beforeEach(async () => {
   tempRoot = await realpath(await mkdtemp(path.join(tmpdir(), "doublcov-fs-")));
+});
+
+it("copies the contents of a symlinked asset directory into a portable directory", async () => {
+  const assets = path.join(tempRoot, "assets");
+  const linked = path.join(tempRoot, "linked");
+  const output = path.join(tempRoot, "output");
+  await mkdir(assets);
+  await writeFile(path.join(assets, "index.html"), "report");
+  await symlink(assets, linked);
+  await copyDirectory(linked, output);
+  await rm(linked);
+  await rm(assets, { recursive: true });
+  expect(await readFile(path.join(output, "index.html"), "utf8")).toBe(
+    "report",
+  );
 });
 
 afterEach(async () => {

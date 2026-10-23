@@ -39,6 +39,43 @@ end_of_record`,
     expect(bundle.sourcePayloads[0]?.lines).toEqual(["x;", ""]);
   });
 
+  it("keeps an exact empty source ahead of suffix and basename candidates", () => {
+    const bundle = buildCoverageBundle({
+      lcov: "SF:src/Foo.ts\nDA:1,1",
+      sourceFiles: [
+        { path: "src/Foo.ts", content: "" },
+        { path: "other/src/Foo.ts", content: "wrong" },
+        { path: "Foo.ts", content: "also wrong" },
+      ],
+    });
+    expect(bundle.sourcePayloads[0]?.lines).toEqual([""]);
+    expect(bundle.report.diagnostics).toEqual([]);
+  });
+
+  it("treats suffix matches in opposite directions as ambiguous", () => {
+    const bundle = buildCoverageBundle({
+      lcov: "SF:pkg/src/Foo.ts\nDA:1,1",
+      sourceFiles: [
+        { path: "src/Foo.ts", content: "first" },
+        { path: "checkout/pkg/src/Foo.ts", content: "second" },
+      ],
+    });
+    expect(bundle.sourcePayloads[0]?.lines).toEqual([""]);
+    expect(bundle.report.diagnostics).toHaveLength(1);
+  });
+
+  it("requires a path separator before a suffix match", () => {
+    const bundle = buildCoverageBundle({
+      lcov: "SF:packages/Foo.ts\nDA:1,1",
+      sourceFiles: [
+        { path: "foo/Foo.ts", content: "first" },
+        { path: "otherpackages/Foo.ts", content: "second" },
+      ],
+    });
+    expect(bundle.sourcePayloads[0]?.lines).toEqual([""]);
+    expect(bundle.report.diagnostics).toHaveLength(1);
+  });
+
   it("does not match by basename when multiple files share a name", () => {
     const bundle = buildCoverageBundle({
       lcov: `SF:obj/output/Foo.ts

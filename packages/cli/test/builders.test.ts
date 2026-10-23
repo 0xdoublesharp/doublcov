@@ -1,10 +1,28 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { mkdtemp, realpath, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import type { BuilderOptions } from "../src/args.js";
 import { hardhatBuilder } from "../src/builders/hardhat.js";
 import {
   registerCoverageBuilder,
   resolveBuilder,
 } from "../src/builders/registry.js";
+
+const originalCwd = process.cwd();
+let workspace: string;
+
+beforeEach(async () => {
+  workspace = await realpath(
+    await mkdtemp(path.join(tmpdir(), "doublcov-builders-")),
+  );
+  process.chdir(workspace);
+});
+
+afterEach(async () => {
+  process.chdir(originalCwd);
+  await rm(workspace, { recursive: true, force: true });
+});
 
 function builderOptions(
   overrides: Partial<BuilderOptions> = {},

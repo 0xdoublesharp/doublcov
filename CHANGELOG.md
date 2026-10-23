@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.5
+
+- Preserve LCOV function end lines and merge LCOV 2.2 groups by source location, keeping alias changes from inventing uncovered functions.
+- Handle Solidity block comments, multiline assembly headers, and nested braces when excluding assembly from coverage totals.
+- Index source-path matching and use a reactive source cache without copying previously loaded files.
+- Restore fragment navigation, handle special file IDs, include nested files in explicitly selected external source roots, and support symlinked web build directories.
+- Handle report assets disappearing during streaming and close streams when clients disconnect.
+- Isolate mutable test registries and builder filesystem fixtures. Make browser tests explicitly use static reports so source interception works locally and in CI.
+
 ## 0.4.4
 
 Fixes coverage parsing and source-viewer navigation, improves large LCOV performance, and updates dependencies.

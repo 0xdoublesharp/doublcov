@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 import { parseLcov } from "../src/lcov.js";
 
 describe("LCOV function formats", () => {
+  it("does not keep a stale end line when a function definition is replaced", () => {
+    const [record] = parseLcov(
+      "SF:main.cpp\nFN:10,20,example\nFN:30,example\nFNDA:1,example",
+    );
+    expect(record?.functions).toEqual([{ name: "example", line: 30, hits: 1 }]);
+  });
   it("preserves numeric legacy names without a second comma", () => {
     const [record] = parseLcov("SF:main.js\nFN:10,123\nFNDA:7,123");
     expect(record?.functions).toEqual([{ name: "123", line: 10, hits: 7 }]);
@@ -19,7 +25,7 @@ describe("LCOV function formats", () => {
         ].join("\n"),
       );
       expect(record?.functions).toEqual([
-        { name: "example<int, bool>", line: 10, hits: 7 },
+        { name: "example<int, bool>", line: 10, endLine: 20, hits: 7 },
       ]);
       expect(record?.totals.functions).toMatchObject({ found: 1, hit: 1 });
     },
@@ -44,8 +50,14 @@ FNL:1,30
 FNA:1,0,uncovered
 end_of_record`);
     expect(record?.functions).toEqual([
-      { name: "example<int, bool>", line: 10, hits: 5 },
-      { name: "uncovered", line: 30, hits: 0 },
+      {
+        name: "example<int, bool>",
+        line: 10,
+        endLine: 20,
+        hits: 5,
+        aliases: ["example<int>", "example<int, bool>", "example<double>"],
+      },
+      { name: "uncovered", line: 30, hits: 0, aliases: ["uncovered"] },
     ]);
     expect(record?.totals.functions).toMatchObject({ found: 2, hit: 1 });
   });
@@ -61,8 +73,8 @@ FNA:0,4,orphan
 FNL:0,20
 FNA:0,2,second`);
       expect(records.map((record) => record.functions)).toEqual([
-        [{ name: "first", line: 10, hits: 3 }],
-        [{ name: "second", line: 20, hits: 2 }],
+        [{ name: "first", line: 10, hits: 3, aliases: ["first"] }],
+        [{ name: "second", line: 20, hits: 2, aliases: ["second"] }],
       ]);
     },
   );
@@ -81,6 +93,21 @@ FNA:0,1.5,fractionalHits
 FNA:0,1,
 FNA:0,1,   
 FNA:0,3,valid`);
-    expect(record?.functions).toEqual([{ name: "valid", line: 10, hits: 3 }]);
+    expect(record?.functions).toEqual([
+      { name: "valid", line: 10, hits: 3, aliases: ["valid"] },
+    ]);
   });
+
+  it.each(["FN:10,5,example\nFNDA:1,example", "FNL:0,10,5\nFNA:0,1,example"])(
+    "does not attach an end line preceding the start: %s",
+    (input) => {
+      const [record] = parseLcov(`SF:main.cpp\n${input}`);
+      expect(record?.functions[0]).toMatchObject({
+        name: "example",
+        line: 10,
+        hits: 1,
+      });
+      expect(record?.functions[0]).not.toHaveProperty("endLine");
+    },
+  );
 });

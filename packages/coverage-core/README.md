@@ -6,7 +6,7 @@ This package is intentionally builder-agnostic. It parses LCOV, detects source l
 
 ## Workspace API
 
-- `parseLcov(input)` parses LCOV records.
+- `parseLcov(input)` parses LCOV records, preserving optional function end lines and the aliases of LCOV 2.2 function groups.
 - `buildCoverageBundle(input)` builds report JSON and source payloads.
 - `appendHistoryRun(history, report, metadata)` appends a coverage-history point.
 - `registerLanguageDefinition(definition)` registers language detection and ignored-line rules for embedders.

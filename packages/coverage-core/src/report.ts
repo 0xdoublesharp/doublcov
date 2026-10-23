@@ -39,13 +39,14 @@ export function buildCoverageBundle(
     ]),
   );
   const lcovRecords = mergeLcovRecords(parseLcov(input.lcov), projectRoot);
+  const findSourceContent = createSourceResolver(sourcesByPath);
 
   const sourcePayloads: SourceFilePayload[] = [];
   const missingSourceDiagnostics: CoverageDiagnostic[] = [];
   const files: SourceFileCoverage[] = lcovRecords.map((record, index) => {
     const normalizedPath = normalizeSourcePath(record.sourceFile, projectRoot);
     const language = detectSourceLanguage(normalizedPath);
-    const sourceMatch = findSourceContent(sourcesByPath, normalizedPath);
+    const sourceMatch = findSourceContent(normalizedPath);
     if (!sourceMatch.found) {
       missingSourceDiagnostics.push({
         id: `missing-source:${normalizedPath}`,
@@ -265,18 +266,7 @@ function mergeFunctions(
   existing: FunctionDetail[],
   incoming: FunctionDetail[],
 ): FunctionDetail[] {
-  const byKey = new Map<string, FunctionDetail>();
-  for (const fn of existing) byKey.set(functionKey(fn), { ...fn });
-  for (const fn of incoming) {
-    const key = functionKey(fn);
-    const current = byKey.get(key);
-    if (current) {
-      current.hits += fn.hits;
-    } else {
-      byKey.set(key, { ...fn });
-    }
-  }
-  return collapseDuplicateFunctions([...byKey.values()]);
+  return collapseDuplicateFunctions([...existing, ...incoming]);
 }
 
 function mergeBranches(
@@ -295,10 +285,6 @@ function mergeBranches(
     }
   }
   return [...byKey.values()];
-}
-
-function functionKey(fn: FunctionDetail): string {
-  return `${fn.name}\u0000${fn.line}`;
 }
 
 function branchKey(branch: BranchDetail): string {
@@ -510,39 +496,49 @@ function normalizeSourcePath(filePath: string, projectRoot?: string): string {
   return normalized.slice(root.length + 1);
 }
 
-function stripLeadingDot(filePath: string): string {
-  return filePath.replace(/^\.\//, "");
+function createSourceResolver(
+  sourcesByPath: Map<string, string>,
+): (lcovPath: string) => { content: string; found: boolean } {
+  // Null marks ambiguity, including two paths whose contents are identical.
+  // Index once instead of scanning all source files for every LCOV record.
+  const bySuffix = new Map<string, string | null>();
+  const byBasename = new Map<string, string | null>();
+  for (const sourcePath of sourcesByPath.keys()) {
+    for (const suffix of pathSuffixes(sourcePath)) {
+      bySuffix.set(suffix, bySuffix.has(suffix) ? null : sourcePath);
+    }
+    const basename = sourcePath.slice(sourcePath.lastIndexOf("/") + 1);
+    byBasename.set(basename, byBasename.has(basename) ? null : sourcePath);
+  }
+
+  return (lcovPath) => {
+    const exact = sourcesByPath.get(lcovPath);
+    if (exact !== undefined) return { content: exact, found: true };
+
+    let matchedPath = bySuffix.get(lcovPath);
+    for (const suffix of pathSuffixes(lcovPath)) {
+      if (matchedPath === null) break;
+      if (sourcesByPath.has(suffix)) {
+        matchedPath = matchedPath === undefined ? suffix : null;
+      }
+    }
+    matchedPath ??= byBasename.get(
+      lcovPath.slice(lcovPath.lastIndexOf("/") + 1),
+    );
+    return matchedPath !== undefined && matchedPath !== null
+      ? { content: sourcesByPath.get(matchedPath)!, found: true }
+      : { content: "", found: false };
+  };
 }
 
-function findSourceContent(
-  sourcesByPath: Map<string, string>,
-  lcovPath: string,
-): { content: string; found: boolean } {
-  const stripped = stripLeadingDot(lcovPath);
-  const exact = sourcesByPath.get(lcovPath) ?? sourcesByPath.get(stripped);
-  if (exact !== undefined) return { content: exact, found: true };
-
-  const suffixMatches = [...sourcesByPath.entries()].filter(
-    ([sourcePath]) =>
-      lcovPath.endsWith(`/${sourcePath}`) ||
-      sourcePath.endsWith(`/${stripped}`),
-  );
-  if (suffixMatches.length === 1) {
-    // length===1 guarantees the entry exists, and Map.entries() always yields
-    // a [key, value] tuple whose value is the string content. The non-null
-    // assertion removes a dead `?? ""` branch.
-    return { content: suffixMatches[0]![1], found: true };
+function* pathSuffixes(filePath: string): Generator<string> {
+  for (
+    let slash = filePath.indexOf("/");
+    slash !== -1;
+    slash = filePath.indexOf("/", slash + 1)
+  ) {
+    yield filePath.slice(slash + 1);
   }
-
-  const lcovFileName = stripped.split("/").at(-1);
-  const basenameMatches = [...sourcesByPath.entries()].filter(
-    ([sourcePath]) => sourcePath.split("/").at(-1) === lcovFileName,
-  );
-  if (basenameMatches.length === 1) {
-    // Same defensive-but-unreachable pattern as the suffix match above.
-    return { content: basenameMatches[0]![1], found: true };
-  }
-  return { content: "", found: false };
 }
 
 function trimCommonSourcePrefix(filePath: string): string {

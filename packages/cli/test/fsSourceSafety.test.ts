@@ -134,6 +134,32 @@ describe("readSourceFiles root and symlink safety", () => {
     expect(files).toEqual([]);
   });
 
+  it("recurses through explicit external source roots without following escaping symlinks", async () => {
+    const project = path.join(tempRoot, "project");
+    const external = path.join(tempRoot, "external");
+    const secrets = path.join(tempRoot, "secrets");
+    await mkdir(project);
+    await mkdir(path.join(external, "nested"), { recursive: true });
+    await mkdir(secrets);
+    await writeFile(path.join(external, "nested", "allowed.ts"), "allowed\n");
+    await writeFile(path.join(secrets, "secret.ts"), "secret\n");
+    await symlink(secrets, path.join(external, "escape"));
+    await symlink(
+      path.join(secrets, "secret.ts"),
+      path.join(external, "leak.ts"),
+    );
+
+    const files = await readSourceFiles([external], { root: project });
+    expect(files).toEqual([
+      {
+        path: path
+          .join(external, "nested", "allowed.ts")
+          .replaceAll(path.sep, "/"),
+        content: "allowed\n",
+      },
+    ]);
+  });
+
   it("rethrows non-ENOENT/ELOOP stat errors", async () => {
     const longSegment = "x".repeat(300);
     const veryLong = path.join(tempRoot, "src", longSegment);

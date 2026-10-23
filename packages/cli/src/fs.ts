@@ -127,7 +127,7 @@ export async function copyDirectory(
   destination: string,
 ): Promise<void> {
   await fs.mkdir(destination, { recursive: true });
-  await fs.cp(source, destination, { recursive: true });
+  await fs.cp(await fs.realpath(source), destination, { recursive: true });
 }
 
 async function collectFiles(
@@ -165,7 +165,7 @@ async function collectFiles(
       // unless the user explicitly listed them as a source. Otherwise a
       // src/external -> /etc symlink would slurp arbitrary host content
       // into the coverage report.
-      if (!isExplicitRoot && !isInsideRealRoot(realDirPath, realRoot)) continue;
+      if (!isInsideAnyRealRoot(realDirPath, allowedRealRoots)) continue;
       if (visited.has(realDirPath)) continue;
       visited.add(realDirPath);
       const entries = await fs.readdir(input);
