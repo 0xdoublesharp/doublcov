@@ -3,8 +3,8 @@
   <h1>@0xdoublesharp/doublcov</h1>
   <p><strong>Find what's missing in LCOV coverage.</strong></p>
   <p>
-    Static, self-contained coverage reports with source browsing, uncovered navigation,
-    history, diagnostics, syntax highlighting, themes, and declarative UI hooks.
+    Browse uncovered code, follow coverage changes, and share reports
+    that run in your browser.
   </p>
   <p>
     <a href="https://www.npmjs.com/package/@0xdoublesharp/doublcov"><img alt="npm" src="https://img.shields.io/npm/v/@0xdoublesharp/doublcov?color=2ea043"></a>
@@ -13,7 +13,7 @@
   </p>
 </div>
 
-Build from an existing `lcov.info` file or run one of the built-in coverage builders first:
+Turn an existing `lcov.info` file into a report:
 
 ```bash
 npx @0xdoublesharp/doublcov build --lcov lcov.info --sources src
@@ -21,12 +21,15 @@ npx @0xdoublesharp/doublcov build --lcov lcov.info --sources src
 
 ## What You Get
 
-- A portable static report directory you can upload to CI artifacts or any static host.
+- A self-contained HTML report for local use, or a static report directory for large projects and hosting.
 - Built-in builders for Foundry, Hardhat, Vitest, Jest, Node/V8, pytest, Rust coverage tools, and gcov/lcov.
-- Source-level navigation for uncovered lines, branch/function totals, parser diagnostics, and historical coverage.
-- A GitHub Action, npm package, standalone binaries, and Docker image for different project shapes.
+- Source browsing with syntax highlighting, navigation to uncovered code, line/branch/function totals, diagnostics, and coverage history.
+- Themes and declarative UI hooks for adding project links and report information.
+- An npm package, GitHub Action, standalone binaries, and Docker image.
 
 ## Install
+
+The npm CLI requires Node 22 or newer.
 
 ```bash
 npm install --save-dev @0xdoublesharp/doublcov
@@ -50,11 +53,7 @@ or:
 pnpm dlx @0xdoublesharp/doublcov build
 ```
 
-The executable is:
-
-```bash
-doublcov
-```
+Use the installed `doublcov` executable in package scripts. To run an example without installing, replace `doublcov` with `npx @0xdoublesharp/doublcov`.
 
 ## Commands
 
@@ -66,7 +65,7 @@ doublcov build \
   --sources src
 ```
 
-Run a builder and then build the report:
+Run a coverage tool and build its report in one command. The underlying tool must be installed in your project or environment.
 
 ```bash
 doublcov foundry -- --exclude-tests --ir-minimum
@@ -80,7 +79,7 @@ doublcov cargo-tarpaulin
 doublcov lcov-capture
 ```
 
-Local builds open the generated `index.html` automatically. Open an existing report directory:
+Local builds create a self-contained `index.html` and open it in your browser. To reopen an existing report:
 
 ```bash
 doublcov open coverage/report
@@ -102,7 +101,7 @@ Generic `build` defaults:
 - output directory: `coverage/report`
 - history file: `.doublcov/history.json`
 
-Builder commands also read ecosystem config and place the report next to the resolved LCOV file when `--out` is not set.
+Builder commands also read your coverage tool's configuration. Unless you set `--out`, they write the report beside the resolved LCOV file.
 
 ## Supported Builders
 
@@ -122,7 +121,7 @@ Pass arguments to the underlying builder after `--`:
 
 ```bash
 doublcov forge -- --exclude-tests --ir-minimum
-doublcov vite -- --runInBand
+doublcov vite -- --maxWorkers 1
 doublcov pytest -- tests/unit
 doublcov cargo-llvm-cov -- --workspace
 ```
@@ -193,7 +192,7 @@ These builders assume the ecosystem coverage tool is installed in the project or
 
 ## Diagnostics
 
-Attach parser-tagged diagnostics:
+Attach diagnostic files to show information alongside coverage. Prefix each path with its parser name:
 
 ```bash
 doublcov build \
@@ -209,7 +208,7 @@ doublcov forge --debug coverage.debug --bytecode coverage.bytecode
 
 ## Themes And UI Hooks
 
-Attach declarative report customization:
+Choose a configuration file and the report's default theme:
 
 ```bash
 doublcov build \
@@ -227,11 +226,11 @@ Builder command defaults resolve from CLI flags first, then `doublcov.config.jso
 
 ## Output Hosting
 
-Standalone reports can be opened directly from disk. Static reports are better for large projects and can be uploaded to GitHub Pages, GitLab Pages, Netlify, Vercel, Cloudflare Pages, object storage, or CI artifacts.
+Use standalone reports for opening from disk. For large projects or hosting, choose `--mode static` and upload the entire output directory to GitHub Pages, another static host, or CI artifacts.
 
 ## GitHub Action
 
-For non-Node projects, use the repository action to download the standalone binary in CI:
+The GitHub Action downloads a standalone binary and works with projects in any language:
 
 ```yaml
 - uses: 0xdoublesharp/doublcov@v0
@@ -241,13 +240,13 @@ For non-Node projects, use the repository action to download the standalone bina
 ```
 
 Use the moving major action ref for compatible action updates. Omit `version`
-to download the latest GitHub Release binary, or set `version: v0.4.5` to pin
+to download the latest GitHub Release binary, or set `version: v0.4.6` to pin
 the downloaded CLI binary for reproducible CI.
 The action passes `--no-open` by default. Add `--open` to `args` only when the workflow intentionally has a browser-capable environment.
 
 ## Distribution
 
-npm is the primary distribution channel for the CLI. Tagged GitHub Releases publish standalone binaries and checksums, the root GitHub Action wraps those binaries for any-language CI, and the Docker image is published for containerized workflows.
+Install the CLI from npm, download a standalone binary and its checksum from [GitHub Releases](https://github.com/0xdoublesharp/doublcov/releases/latest), or use the Docker image for containerized workflows. The GitHub Action uses the same release binaries.
 
 Additional docs:
 

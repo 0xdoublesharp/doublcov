@@ -1,10 +1,10 @@
 # Releasing
 
-Maintainer reference for cutting a Doublcov release. End-user install paths live in the [README](../README.md) and [usage guides](usage/README.md); CI integration lives in [CI And Hosting](CI.md).
+Release Doublcov by merging the version change, then pushing an annotated version tag. GitHub Actions verifies the code and publishes every release channel. For installation and usage, see the [README](../README.md); for report hosting, see [CI And Hosting](CI.md).
 
 ## Release Channels
 
-Every release tag (`v*`) publishes to all of:
+Each stable release tag (`v*.*.*`) publishes to these channels:
 
 | Channel         | Artifact                                                 |
 | --------------- | -------------------------------------------------------- |
@@ -16,6 +16,22 @@ Every release tag (`v*`) publishes to all of:
 Additional install channels should consume the tagged GitHub Release binaries and checksums.
 
 Images for v0.4.5 and earlier remain under the previous `doublesharp` GHCR namespace. Later releases publish only to `ghcr.io/0xdoublesharp/doublcov`.
+
+## Cut a Release
+
+1. Update the versions in `apps/web/package.json`, `packages/cli/package.json`, and `packages/coverage-core/package.json` together.
+2. Add the release to `CHANGELOG.md` and update pinned binary versions in the README and CI examples.
+3. Run `pnpm run verify:publish` and `pnpm run test:e2e`. Commit the changes, open a pull request, and merge after CI passes.
+4. From the merged `main` commit, create and push the version tag:
+
+   ```bash
+   git switch main
+   git pull --ff-only
+   git tag -a v0.4.6 -m "Release v0.4.6"
+   git push origin v0.4.6
+   ```
+
+5. Check that the Release workflow succeeds. Confirm the npm version, five binaries and checksums, both container architectures, and the updated `v0` Action tag before announcing the release.
 
 ## Release Workflow
 
@@ -46,7 +62,7 @@ Use the action `version` input to control which Doublcov binary the action downl
 ```yaml
 - uses: 0xdoublesharp/doublcov@v0
   with:
-    version: v0.4.5
+    version: v0.4.6
 ```
 
 Omit `version` to download the latest GitHub Release binary. Pin `version` in reproducible CI examples; omit it in quick-start examples where following the latest release is acceptable.
@@ -60,7 +76,7 @@ npm publish ./packages/cli --access public --dry-run --ignore-scripts
 pnpm run build:binary   # produces packages/cli/dist/bin/<host-binary>
 ```
 
-The release workflow runs `verify:publish` before publishing, then uses `npm publish` from GitHub Actions so npm trusted publishing can exchange the workflow OIDC token for a short-lived publish token. Never run `publish` without `--dry-run` from a workstation for a real release — provenance must be signed by GitHub Actions.
+The workflow publishes through npm trusted publishing with an OIDC token and provenance from GitHub Actions. Use `--dry-run` for local package checks; publish releases through the workflow.
 
 ## Artifact Details
 

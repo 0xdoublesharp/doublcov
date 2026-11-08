@@ -1,8 +1,8 @@
 # CI And Hosting
 
-Doublcov reports are static artifacts. CI should generate LCOV, run Doublcov, then upload or publish the output directory.
+Generate LCOV, run Doublcov, then upload the entire report directory as an artifact or publish it to a static host.
 
-CI environments default to `--mode static` and `--no-open`. Static mode keeps `index.html`, assets, `data/report.json`, and per-file source payloads as separate files so large reports do not have to parse one huge HTML file up front. The GitHub Action injects `--no-open` unless `args` already contains `--open` or `--no-open`.
+CI defaults to `--mode static --no-open`. Static reports load source files as needed, keeping large reports usable without embedding every file in the HTML. The GitHub Action adds `--no-open` unless `args` already contains `--open` or `--no-open`.
 
 ## Generic CI Flow
 
@@ -20,11 +20,10 @@ Upload:
 coverage/report
 ```
 
-In GitHub Actions, that directory stays on the runner unless the workflow uploads
-or publishes it. To keep it as a downloadable workflow artifact:
+The report stays on the runner unless your workflow uploads or publishes it. To make it available as a downloadable GitHub Actions artifact:
 
 ```yaml
-- uses: actions/upload-artifact@v4
+- uses: actions/upload-artifact@v7
   with:
     name: doublcov-report
     path: coverage/report
@@ -32,7 +31,7 @@ or publishes it. To keep it as a downloadable workflow artifact:
 
 ## GitHub Actions
 
-For projects in any language, the official action downloads the release binary, verifies it, and runs Doublcov:
+The action downloads a release binary, verifies its checksum, and runs Doublcov. It works with projects in any language:
 
 ```yaml
 - uses: 0xdoublesharp/doublcov@v0
@@ -42,7 +41,7 @@ For projects in any language, the official action downloads the release binary, 
 ```
 
 Use the moving major action ref for compatible action updates. Omit `version`
-to download the latest GitHub Release binary, or set `version: v0.4.5` to pin
+to download the latest GitHub Release binary, or set `version: v0.4.6` to pin
 the downloaded CLI binary for reproducible CI.
 
 To install `doublcov` into `PATH` and run multiple commands:
@@ -50,7 +49,7 @@ To install `doublcov` into `PATH` and run multiple commands:
 ```yaml
 - uses: 0xdoublesharp/doublcov@v0
   with:
-    version: v0.4.5
+    version: v0.4.6
     install-only: "true"
 
 - run: doublcov build --lcov coverage/lcov.info --sources src --out coverage/report --no-open
@@ -110,16 +109,14 @@ forward to the report:
     cp -R coverage/report/. pages/coverage/
     printf '%s\n' '<!doctype html><meta http-equiv="refresh" content="0; url=coverage/">' > pages/index.html
 
-- uses: actions/upload-pages-artifact@v3
+- uses: actions/upload-pages-artifact@v5
   with:
     path: pages
 
 - uses: actions/deploy-pages@v5
 ```
 
-The Doublcov repository dogfoods this flow in
-`.github/workflows/coverage.yml`: pull requests upload `doublcov-report`, while
-main-branch runs publish the same static report to GitHub Pages at `/coverage/`.
+This repository uses that flow in [the coverage workflow](../.github/workflows/coverage.yml): pull requests upload `doublcov-report`, and main-branch runs publish the static report to GitHub Pages at `/coverage/`.
 
 ## History
 
@@ -129,4 +126,4 @@ Doublcov writes history to:
 .doublcov/history.json
 ```
 
-For persistent history across CI runs, restore and save that file with your CI cache or store it in a branch/static bucket workflow. If history is not restored, each CI build still produces a valid current report.
+Restore this file before building and save it afterward to keep history across CI runs. Use a CI cache, a dedicated branch, or object storage. Without a restored history file, the report contains only the current run.

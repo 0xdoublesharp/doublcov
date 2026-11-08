@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.6
+
+- Refresh Vue, Tailwind CSS, Shiki, Vite, Playwright, Vitest, Stryker, and linting tools; update pnpm to 10.34.9.
+- Patch vulnerable direct and transitive dependencies, including scoped updates for `qs`, `glob`, and `minimatch` while their consumers await upstream fixes.
+- Update GitHub Actions and usage examples, clarify report modes and installation, and revise the README and documentation.
+- Replace floating dependency tags with version ranges and align Node.js types with the supported Node 22 runtime. Retain TypeScript 6 for compiler API compatibility with Vue and ESLint tooling.
+- Point repository metadata, documentation, and Action defaults at `0xdoublesharp/doublcov`; publish future container images under the repository owner's GHCR namespace.
+
 ## 0.4.5
 
 - Preserve LCOV function end lines and merge LCOV 2.2 groups by source location, keeping alias changes from inventing uncovered functions.

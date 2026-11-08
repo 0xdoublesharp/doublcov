@@ -1,6 +1,6 @@
 # pytest
 
-Builder name: `pytest` (aliases: `python`, `coverage.py`). Runs `python -m pytest --cov --cov-report=lcov:<path>` and feeds the produced LCOV into Doublcov.
+Run `doublcov pytest` to collect Python coverage and build a report. The aliases `python` and `coverage.py` use the same builder, which runs `python -m pytest --cov --cov-report=lcov:<path>`.
 
 ## Prerequisites
 
@@ -43,26 +43,26 @@ doublcov pytest -- -k "not slow" tests/unit
 
 ## Project scripts
 
-There is no native pytest equivalent of `package.json` scripts. A `Makefile` target works well:
+Use a Makefile to keep local and CI commands together:
 
 ```make
 .PHONY: coverage
 coverage:
-	npx doublcov pytest
+	npx @0xdoublesharp/doublcov pytest
 
 .PHONY: coverage-ci
 coverage-ci:
-	npx doublcov pytest --no-open
+	npx @0xdoublesharp/doublcov pytest --no-open
 ```
 
 Or a `justfile`:
 
 ```text
 coverage:
-    npx doublcov pytest
+    npx @0xdoublesharp/doublcov pytest
 
 coverage-ci:
-    npx doublcov pytest --no-open
+    npx @0xdoublesharp/doublcov pytest --no-open
 ```
 
 Doublcov reads `[tool.coverage.lcov] output` from `pyproject.toml` when present.
@@ -81,15 +81,15 @@ doublcov build \
 ## CI snippet
 
 ```yaml
-- uses: actions/setup-python@v5
+- uses: actions/setup-python@v7
   with:
     python-version: "3.12"
-- uses: actions/setup-node@v4
+- uses: actions/setup-node@v7
   with:
     node-version: 22
 - run: pip install -e . pytest pytest-cov
-- run: npx doublcov pytest
-- uses: actions/upload-artifact@v4
+- run: npx @0xdoublesharp/doublcov pytest
+- uses: actions/upload-artifact@v7
   with:
     name: coverage-report
     path: coverage/report

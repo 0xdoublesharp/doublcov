@@ -1,11 +1,11 @@
 # Code Quality Standards
 
-These standards apply to hand-maintained project code: `packages/*/src`,
+Apply these standards to maintained source: `packages/*/src`,
 `packages/*/test`, `apps/web/src`, `scripts`, configuration files, and
 documentation examples. Generated outputs such as `dist`, `dist-types`,
 `*.tsbuildinfo`, coverage output, packaged binaries, and copied web assets are
-validated by rebuilding them, not by hand editing. Review generated diffs only
-to confirm they match the source change that produced them.
+validated by rebuilding them. Do not edit them by hand; check that rebuilt
+outputs reflect the source change.
 
 ## Baseline Checks
 
@@ -15,7 +15,8 @@ Every code change must pass the same workspace gate used by CI and release jobs:
 pnpm run verify:publish
 ```
 
-Use the narrower checks while iterating locally:
+While editing, run the checks that cover your change. Run the full gate after
+the last change it covers:
 
 ```bash
 pnpm run typecheck

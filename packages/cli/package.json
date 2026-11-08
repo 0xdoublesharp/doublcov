@@ -1,6 +1,6 @@
 {
   "name": "@0xdoublesharp/doublcov",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "description": "Find what's missing with static LCOV coverage reports",
   "license": "MIT",
   "author": "0xdoublesharp",
@@ -57,10 +57,10 @@
   },
   "devDependencies": {
     "@0xdoublesharp/doublcov-core": "workspace:*",
-    "@vitest/coverage-v8": "^5.0.0",
-    "esbuild": "latest",
-    "publint": "^0.3.24",
-    "vitest": "latest"
+    "@vitest/coverage-v8": "^5.1.0",
+    "esbuild": "^0.28.2",
+    "publint": "^0.3.25",
+    "vitest": "^5.1.0"
   },
   "engines": {
     "node": ">=22"

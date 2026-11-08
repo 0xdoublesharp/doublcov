@@ -1,6 +1,6 @@
 # Configuration
 
-Doublcov works without a config file. Use configuration when a report needs local workflow defaults, custom theme metadata, or declarative UI hooks.
+Start with CLI flags, then save repeated settings in `doublcov.config.json`. The same file can set report paths, themes, and links or labels in the report UI.
 
 ## CLI Options
 
@@ -20,7 +20,7 @@ Local builds open the generated report by default. CI and the GitHub Action defa
 
 `--mode standalone` writes a self-contained `index.html` that works from disk and is the local default. `--mode static` writes split assets and lazy-loaded JSON for large reports and static hosting; CI defaults to static mode. Use `doublcov open coverage/report` to preview any report locally. It opens standalone reports directly and serves static reports from an available local port.
 
-Doublcov automatically attempts to load `doublcov.config.json` from the current working directory. If the default file is absent, the build continues without customization. Theme and hook customization from the config is embedded into the generated report; workflow fields such as `mode`, `lcov`, `out`, `history`, `name`, and `open` only affect the CLI run.
+Doublcov reads `doublcov.config.json` from the current working directory if it exists. Theme and hook customization is embedded in the report. Workflow fields such as `mode`, `lcov`, `out`, `history`, `name`, and `open` control the CLI run.
 
 ## Default Precedence
 
@@ -32,7 +32,7 @@ For builder commands such as `doublcov forge`, `doublcov hardhat`, and `doublcov
 4. Built-in builder defaults
 5. Generic Doublcov defaults
 
-When a builder resolves an LCOV path and no report output directory is set, Doublcov writes the static report to a `report` directory next to that LCOV file. For example, `coverage/lcov.info` produces `coverage/report`.
+If you do not set an output directory, a builder writes its report to a `report` directory beside the resolved LCOV file. For example, `coverage/lcov.info` produces `coverage/report`. The selected mode determines whether that directory contains a standalone or split static report.
 
 ## Customization Shape
 
@@ -175,7 +175,7 @@ Built-in themes are:
 
 ## UI Hooks
 
-Hooks are declarative metadata rendered by the static web app. They are not executable browser plugins, and hook text is rendered as text rather than raw HTML.
+Hooks add links, labels, and information panels to the report. They contain declarative metadata; text is escaped, and hooks cannot execute browser code.
 
 Supported hook locations:
 
