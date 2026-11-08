@@ -15,7 +15,7 @@ FROM node:22-alpine
 
 LABEL org.opencontainers.image.title="Doublcov"
 LABEL org.opencontainers.image.description="Static LCOV coverage report generator"
-LABEL org.opencontainers.image.source="https://github.com/doublesharp/doublcov"
+LABEL org.opencontainers.image.source="https://github.com/0xdoublesharp/doublcov"
 LABEL org.opencontainers.image.licenses="MIT"
 
 WORKDIR /work

@@ -1403,7 +1403,7 @@ function readStoredSidePanelWidth(panel: "left" | "right"): number {
         <span>by</span>
         <a
           class="font-medium text-[var(--accent)] underline"
-          href="https://github.com/doublesharp/doublcov"
+          href="https://github.com/0xdoublesharp/doublcov"
           target="_blank"
           rel="noreferrer"
         >

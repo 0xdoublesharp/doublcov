@@ -11,9 +11,11 @@ Every release tag (`v*`) publishes to all of:
 | npm             | `@0xdoublesharp/doublcov`                                |
 | GitHub Releases | per-platform binaries + `SHA256SUMS`                     |
 | GitHub Action   | [`action.yml`](../action.yml) (downloads release binary) |
-| GHCR            | `ghcr.io/doublesharp/doublcov:<tag>` and `:latest`       |
+| GHCR            | `ghcr.io/0xdoublesharp/doublcov:<tag>` and `:latest`     |
 
 Additional install channels should consume the tagged GitHub Release binaries and checksums.
+
+Images for v0.4.5 and earlier remain under the previous `doublesharp` GHCR namespace. Later releases publish only to `ghcr.io/0xdoublesharp/doublcov`.
 
 ## Release Workflow
 
@@ -23,7 +25,7 @@ Tagged stable semver pushes (`v*.*.*`) trigger [`.github/workflows/release.yml`]
 2. **`binary`** — matrix across `linux-x64`, `linux-arm64`, `macos-x64`, `macos-arm64`, `windows-x64`. Each runner builds its native standalone binary.
 3. **`github-release`** — collects binary artifacts, generates `SHA256SUMS`, creates the GitHub Release with notes from `CHANGELOG.md`.
 4. **`npm`** — installs the latest npm CLI and publishes `@0xdoublesharp/doublcov` with trusted-publishing provenance.
-5. **`container`** — builds and pushes the multi-arch image to GHCR.
+5. **`container`** — builds and pushes the multi-arch image to GHCR as `ghcr.io/<owner>/doublcov`, using the repository owner in lowercase.
 6. **`container-manifest`** — publishes the multi-arch `:<tag>` and `:latest` image manifests.
 7. **`major-tag`** — after the release, npm, and container publish succeed, force-updates the moving major tag (`v0` for `v0.x.y`) to the released commit.
 
@@ -34,7 +36,7 @@ Pull requests and `main` pushes run [`.github/workflows/ci.yml`](../.github/work
 The GitHub Action should be documented with a moving major tag:
 
 ```yaml
-- uses: doublesharp/doublcov@v0
+- uses: 0xdoublesharp/doublcov@v0
 ```
 
 The workflow updates `v0` after every successful stable `v0.x.y` release. Do not manually publish a GitHub Release for `v0`; it is only an action convenience tag.
@@ -42,7 +44,7 @@ The workflow updates `v0` after every successful stable `v0.x.y` release. Do not
 Use the action `version` input to control which Doublcov binary the action downloads:
 
 ```yaml
-- uses: doublesharp/doublcov@v0
+- uses: 0xdoublesharp/doublcov@v0
   with:
     version: v0.4.5
 ```
@@ -74,7 +76,7 @@ Builder subcommands still require their underlying tool on `PATH` (e.g. `doublco
 
 **Container** is built from [`Dockerfile`](../Dockerfile) on Node 22 Alpine. It ships the bundled CLI under `/opt/doublcov/dist` with a shim at `/usr/local/bin/doublcov`; it is not the SEA binary. Entrypoint `doublcov`, workdir `/work`.
 
-**GitHub Action** is implemented by [`scripts/github-action.mjs`](../scripts/github-action.mjs). Inputs: `version`, `repository`, `command`, `args`, `install-only`. Output: `path`. Use the moving major action ref (`doublesharp/doublcov@v0`) for compatible action updates, and pin the downloaded CLI binary with the `version` input when reproducibility matters.
+**GitHub Action** is implemented by [`scripts/github-action.mjs`](../scripts/github-action.mjs). Inputs: `version`, `repository`, `command`, `args`, `install-only`. Output: `path`. Use the moving major action ref (`0xdoublesharp/doublcov@v0`) for compatible action updates, and pin the downloaded CLI binary with the `version` input when reproducibility matters.
 
 ## Core Package
 

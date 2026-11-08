@@ -35,7 +35,7 @@ or publishes it. To keep it as a downloadable workflow artifact:
 For projects in any language, the official action downloads the release binary, verifies it, and runs Doublcov:
 
 ```yaml
-- uses: doublesharp/doublcov@v0
+- uses: 0xdoublesharp/doublcov@v0
   with:
     command: build
     args: --lcov coverage/lcov.info --sources src --out coverage/report
@@ -48,7 +48,7 @@ the downloaded CLI binary for reproducible CI.
 To install `doublcov` into `PATH` and run multiple commands:
 
 ```yaml
-- uses: doublesharp/doublcov@v0
+- uses: 0xdoublesharp/doublcov@v0
   with:
     version: v0.4.5
     install-only: "true"
@@ -100,7 +100,7 @@ subdirectory in the Pages artifact, and add a root redirect so the site root can
 forward to the report:
 
 ```yaml
-- uses: doublesharp/doublcov@v0
+- uses: 0xdoublesharp/doublcov@v0
   with:
     command: build
     args: --lcov coverage/lcov.info --sources src --out coverage/report --mode static
