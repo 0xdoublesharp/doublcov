@@ -9,7 +9,7 @@ inputs:
   repository:
     description: Repository that publishes Doublcov release binaries.
     required: false
-    default: doublesharp/doublcov
+    default: 0xdoublesharp/doublcov
   command:
     description: Doublcov command to run. Use an empty command with install-only=true to only add doublcov to PATH.
     required: false

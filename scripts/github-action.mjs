@@ -7,7 +7,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 
-const repository = input("repository") || "doublesharp/doublcov";
+const repository = input("repository") || "0xdoublesharp/doublcov";
 const version = input("version") || "latest";
 const command = input("command");
 const args = parseArgs(input("args"));

@@ -8,7 +8,7 @@
   </p>
   <p>
     <a href="https://www.npmjs.com/package/@0xdoublesharp/doublcov"><img alt="npm" src="https://img.shields.io/npm/v/@0xdoublesharp/doublcov?color=2ea043"></a>
-    <a href="https://github.com/doublesharp/doublcov/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/doublesharp/doublcov/ci.yml?branch=main&label=ci"></a>
+    <a href="https://github.com/0xdoublesharp/doublcov/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/0xdoublesharp/doublcov/ci.yml?branch=main&label=ci"></a>
     <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
   </p>
 </div>
@@ -185,7 +185,7 @@ Standalone reports can be opened directly from disk. Static reports are better f
 GitHub Actions example:
 
 ```yaml
-- uses: doublesharp/doublcov@v0
+- uses: 0xdoublesharp/doublcov@v0
   with:
     command: build
     args: --lcov coverage/lcov.info --sources src --out coverage/report

@@ -4,14 +4,14 @@
   "description": "Find what's missing with static LCOV coverage reports",
   "license": "MIT",
   "author": "0xdoublesharp",
-  "homepage": "https://github.com/doublesharp/doublcov#readme",
+  "homepage": "https://github.com/0xdoublesharp/doublcov#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/doublesharp/doublcov.git",
+    "url": "git+https://github.com/0xdoublesharp/doublcov.git",
     "directory": "packages/cli"
   },
   "bugs": {
-    "url": "https://github.com/doublesharp/doublcov/issues"
+    "url": "https://github.com/0xdoublesharp/doublcov/issues"
   },
   "keywords": [
     "doublcov",
