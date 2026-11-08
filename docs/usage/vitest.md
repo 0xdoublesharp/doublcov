@@ -1,6 +1,6 @@
 # Vitest
 
-Builder name: `vite` (alias: `vitest`). Runs `npx vitest run --coverage --coverage.reporter=lcov` and feeds the produced LCOV into Doublcov.
+Run `doublcov vite` to collect Vitest coverage and build a report. The alias `doublcov vitest` runs the same builder, using `npx vitest run --coverage --coverage.reporter=lcov`.
 
 ## Prerequisites
 
@@ -67,12 +67,12 @@ doublcov build \
 ## CI snippet
 
 ```yaml
-- uses: actions/setup-node@v4
+- uses: actions/setup-node@v7
   with:
     node-version: 22
 - run: npm ci
-- run: npx doublcov vite
-- uses: actions/upload-artifact@v4
+- run: npx @0xdoublesharp/doublcov vite
+- uses: actions/upload-artifact@v7
   with:
     name: coverage-report
     path: coverage/report

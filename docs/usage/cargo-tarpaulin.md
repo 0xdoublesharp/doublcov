@@ -1,8 +1,8 @@
 # cargo-tarpaulin
 
-Builder names: `cargo-tarpaulin` (alias: `tarpaulin`). Runs `cargo tarpaulin --out Lcov` and feeds the produced LCOV into Doublcov.
+Run `doublcov cargo-tarpaulin` to collect Rust coverage with Tarpaulin and build a report. The alias `tarpaulin` uses the same builder, which runs `cargo tarpaulin --out Lcov`.
 
-Tarpaulin is Linux-x86_64 first; for macOS or Windows prefer [`cargo-llvm-cov`](cargo-llvm-cov.md).
+Tarpaulin primarily targets Linux x86_64. For macOS or Windows, use [`cargo-llvm-cov`](cargo-llvm-cov.md).
 
 ## Prerequisites
 
@@ -43,11 +43,11 @@ doublcov cargo-tarpaulin -- --workspace --engine llvm
 ```make
 .PHONY: coverage
 coverage:
-	npx doublcov cargo-tarpaulin
+	npx @0xdoublesharp/doublcov cargo-tarpaulin
 
 .PHONY: coverage-ci
 coverage-ci:
-	npx doublcov cargo-tarpaulin --no-open
+	npx @0xdoublesharp/doublcov cargo-tarpaulin --no-open
 ```
 
 ## Manual LCOV path
@@ -68,12 +68,12 @@ doublcov build \
 ```yaml
 - uses: dtolnay/rust-toolchain@stable
 - uses: taiki-e/install-action@cargo-tarpaulin
-- uses: actions/setup-node@v4
+- uses: actions/setup-node@v7
   with:
     node-version: 22
 - run: npm ci
-- run: npx doublcov cargo-tarpaulin
-- uses: actions/upload-artifact@v4
+- run: npx @0xdoublesharp/doublcov cargo-tarpaulin
+- uses: actions/upload-artifact@v7
   with:
     name: coverage-report
     path: coverage/report

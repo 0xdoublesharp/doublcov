@@ -1,8 +1,8 @@
 # @0xdoublesharp/doublcov-core
 
-Shared LCOV parsing and report modeling for Doublcov.
+Parse LCOV and build the report model shared by the Doublcov CLI and web viewer.
 
-This package is intentionally builder-agnostic. It parses LCOV, detects source languages, applies language-specific ignored-line rules, parses optional diagnostics, builds report JSON, and appends coverage history.
+The core parses LCOV, detects source languages, applies ignored-line rules, attaches diagnostics, and appends coverage history. Coverage tools run through the CLI's builders.
 
 ## Workspace API
 
@@ -16,6 +16,6 @@ This package is intentionally builder-agnostic. It parses LCOV, detects source l
 
 ## Package Boundaries
 
-This package is private in the workspace. The registries are available to workspace packages and describe the embedding API shape. External projects should use the published `@0xdoublesharp/doublcov` CLI unless this core package is published with package metadata and stable exports. The CLI ships built-in builder integrations and does not dynamically load third-party builder packages.
+This package is private and its registries are available to workspace packages. External projects should use the published `@0xdoublesharp/doublcov` CLI. Publishing the core separately would require package metadata and stable exports. The CLI includes its own builders and does not load third-party builder packages.
 
 Customization metadata is declarative JSON. It is meant for static report rendering and should not be treated as executable plugin code.

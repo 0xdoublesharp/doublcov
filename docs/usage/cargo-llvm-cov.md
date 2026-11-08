@@ -1,6 +1,6 @@
 # cargo-llvm-cov
 
-Builder names: `cargo-llvm-cov` (aliases: `llvm-cov`, `rust`). Runs `cargo llvm-cov --lcov --output-path <path>` and feeds the produced LCOV into Doublcov.
+Run `doublcov cargo-llvm-cov` to collect Rust coverage and build a report. The aliases `llvm-cov` and `rust` use the same builder, which runs `cargo llvm-cov --lcov --output-path <path>`.
 
 ## Prerequisites
 
@@ -48,21 +48,14 @@ A `Makefile` target:
 ```make
 .PHONY: coverage
 coverage:
-	npx doublcov cargo-llvm-cov
+	npx @0xdoublesharp/doublcov cargo-llvm-cov
 
 .PHONY: coverage-ci
 coverage-ci:
-	npx doublcov cargo-llvm-cov --no-open
+	npx @0xdoublesharp/doublcov cargo-llvm-cov --no-open
 ```
 
-Or `cargo` aliases in `.cargo/config.toml`:
-
-```toml
-[alias]
-coverage = "run --quiet --manifest-path tools/coverage/Cargo.toml"
-```
-
-(Cargo aliases cannot invoke npm scripts directly; use a Makefile or shell wrapper.)
+Cargo aliases cannot invoke npm scripts directly. Use a Makefile or shell wrapper for these commands.
 
 ## Manual LCOV path
 
@@ -82,12 +75,12 @@ doublcov build \
   with:
     components: llvm-tools-preview
 - uses: taiki-e/install-action@cargo-llvm-cov
-- uses: actions/setup-node@v4
+- uses: actions/setup-node@v7
   with:
     node-version: 22
 - run: npm ci
-- run: npx doublcov cargo-llvm-cov
-- uses: actions/upload-artifact@v4
+- run: npx @0xdoublesharp/doublcov cargo-llvm-cov
+- uses: actions/upload-artifact@v7
   with:
     name: coverage-report
     path: coverage/report
@@ -97,5 +90,5 @@ doublcov build \
 
 - **`llvm-tools-preview` missing.** `cargo-llvm-cov` will error during instrumentation. Install with `rustup component add llvm-tools-preview`.
 - **Workspace coverage incomplete.** Pass `-- --workspace` to include all crates.
-- **Phantom uncovered Rust functions on covered lines.** Newer Doublcov builds collapse duplicate Rust v0 monomorphizations that differ only by crate disambiguator, which can happen in workspace builds or when the same crate is compiled in multiple test contexts. Distinct function names, including names that share an underscore suffix, remain separate. If you still see this, regenerate LCOV with a current Doublcov release.
+- **Phantom uncovered Rust functions on covered lines.** Doublcov merges duplicate Rust v0 monomorphizations that differ only by crate disambiguator. These can occur in workspace builds or when a crate is compiled in multiple test contexts. Distinct function names remain separate, including names with a shared underscore suffix. If duplicates remain, regenerate LCOV and use a current Doublcov release.
 - **Doctests excluded.** `cargo llvm-cov` does not measure doctests by default; pass `-- --doctests` (requires nightly) when needed.

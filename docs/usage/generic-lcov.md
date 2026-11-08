@@ -1,6 +1,6 @@
 # Generic LCOV
 
-For any tool that emits an `lcov.info` file. Use this when there is no built-in builder for your test runner, or when you want to keep coverage generation entirely separate from Doublcov.
+Build a report from any tool's `lcov.info` file. Use this path when your coverage tool has no built-in Doublcov builder, or when you prefer to generate coverage in a separate step.
 
 ## Prerequisites
 
@@ -57,7 +57,7 @@ Local `build` commands open the generated report by default. Use `--no-open` in 
 
 ## Manual LCOV path
 
-This guide _is_ the manual LCOV path. The general shape:
+Choose the LCOV file, source roots, extensions, and output directory explicitly:
 
 ```bash
 doublcov build \
@@ -72,13 +72,13 @@ For tools that always write `lcov.info` inside a report directory, `--lcov` must
 ## CI snippet
 
 ```yaml
-- uses: actions/setup-node@v4
+- uses: actions/setup-node@v7
   with:
     node-version: 22
 - run: npm ci
 - run: your-coverage-tool # produces coverage/lcov.info
-- run: npx doublcov build --lcov coverage/lcov.info --sources src --out coverage/report
-- uses: actions/upload-artifact@v4
+- run: npx @0xdoublesharp/doublcov build --lcov coverage/lcov.info --sources src --out coverage/report
+- uses: actions/upload-artifact@v7
   with:
     name: coverage-report
     path: coverage/report

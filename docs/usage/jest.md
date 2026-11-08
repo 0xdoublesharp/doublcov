@@ -1,6 +1,6 @@
 # Jest
 
-Builder name: `jest`. Runs `npx jest --coverage --coverageReporters=lcov` and feeds the produced LCOV into Doublcov.
+Run `doublcov jest` to collect Jest coverage and build a report. The builder runs `npx jest --coverage --coverageReporters=lcov` in your project.
 
 ## Prerequisites
 
@@ -65,12 +65,12 @@ doublcov build \
 ## CI snippet
 
 ```yaml
-- uses: actions/setup-node@v4
+- uses: actions/setup-node@v7
   with:
     node-version: 22
 - run: npm ci
-- run: npx doublcov jest
-- uses: actions/upload-artifact@v4
+- run: npx @0xdoublesharp/doublcov jest
+- uses: actions/upload-artifact@v7
   with:
     name: coverage-report
     path: coverage/report

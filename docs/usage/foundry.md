@@ -1,6 +1,6 @@
 # Foundry
 
-Builder name: `foundry` (alias: `forge`). Runs `forge coverage --report lcov` and feeds the result into Doublcov.
+For Foundry projects, `doublcov forge` runs `forge coverage --report lcov` and builds a report from the result. The alias `doublcov foundry` runs the same builder.
 
 ## Prerequisites
 
@@ -79,12 +79,12 @@ doublcov build \
 
 ```yaml
 - uses: foundry-rs/foundry-toolchain@v1
-- uses: actions/setup-node@v4
+- uses: actions/setup-node@v7
   with:
     node-version: 22
 - run: npm ci
-- run: npx doublcov forge -- --exclude-tests --ir-minimum
-- uses: actions/upload-artifact@v4
+- run: npx @0xdoublesharp/doublcov forge -- --exclude-tests --ir-minimum
+- uses: actions/upload-artifact@v7
   with:
     name: coverage-report
     path: coverage/report

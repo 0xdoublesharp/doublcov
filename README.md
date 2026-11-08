@@ -3,8 +3,8 @@
   <h1>Doublcov</h1>
   <p><strong>Find what's missing in LCOV coverage.</strong></p>
   <p>
-    Static, self-contained coverage reports with source browsing, uncovered navigation,
-    history, diagnostics, syntax highlighting, themes, and declarative UI hooks.
+    Browse uncovered code, follow coverage changes, and share reports
+    that run in your browser.
   </p>
   <p>
     <a href="https://www.npmjs.com/package/@0xdoublesharp/doublcov"><img alt="npm" src="https://img.shields.io/npm/v/@0xdoublesharp/doublcov?color=2ea043"></a>
@@ -13,7 +13,7 @@
   </p>
 </div>
 
-Build from an existing `lcov.info` file or run one of the built-in coverage builders first:
+Turn an existing `lcov.info` file into a report:
 
 ```bash
 npx @0xdoublesharp/doublcov build --lcov lcov.info --sources src
@@ -21,14 +21,15 @@ npx @0xdoublesharp/doublcov build --lcov lcov.info --sources src
 
 ## What You Get
 
-- A portable static report directory with a self-contained `index.html` you can open from disk or upload to any static host.
+- A self-contained HTML report for local use, or a static report directory for large projects and hosting.
 - Built-in builders for Foundry, Hardhat, Vitest, Jest, Node/V8, pytest, Rust coverage tools, and gcov/lcov.
-- Source-level navigation for uncovered lines, branch/function totals, parser diagnostics, and historical coverage.
-- A GitHub Action, npm package, standalone binaries, and Docker image for different project shapes.
+- Source browsing with syntax highlighting, navigation to uncovered code, line/branch/function totals, diagnostics, and coverage history.
+- Themes and declarative UI hooks for adding project links and report information.
+- An npm package, GitHub Action, standalone binaries, and Docker image.
 
 ## Install
 
-For Node-based projects:
+The npm CLI requires Node 22 or newer. Install it in your project:
 
 ```bash
 npm install --save-dev @0xdoublesharp/doublcov
@@ -46,11 +47,13 @@ Run without installing:
 npx @0xdoublesharp/doublcov build
 ```
 
-For non-Node projects, use the GitHub Action, standalone binaries, or Docker image from tagged releases. See [Releasing](docs/RELEASING.md).
+For projects without Node, use the [GitHub Action](docs/CI.md#github-actions), [standalone release binaries](https://github.com/0xdoublesharp/doublcov/releases/latest), or [Docker image](docs/RELEASING.md#release-channels).
 
 ## Quick Start
 
-If your project already emits LCOV:
+Use the installed `doublcov` executable in package scripts. To run an example without installing, replace `doublcov` with `npx @0xdoublesharp/doublcov`.
+
+If your project already produces LCOV:
 
 ```bash
 doublcov build \
@@ -58,13 +61,13 @@ doublcov build \
   --sources src
 ```
 
-Local builds open the generated `index.html` automatically. To skip opening a browser:
+Local builds create a self-contained `index.html` and open it in your browser. To generate a report without opening it:
 
 ```bash
 doublcov build --no-open
 ```
 
-Open an existing report directory:
+Open a report you've already generated:
 
 ```bash
 doublcov open coverage/report
@@ -78,11 +81,11 @@ Generic `build` defaults:
 - history: `.doublcov/history.json`
 - optional config: `doublcov.config.json` when present
 
-Builder commands also read ecosystem config and place the report next to the resolved LCOV file when `--out` is not set.
+Builder commands also read your coverage tool's configuration. Unless you set `--out`, they write the report beside the resolved LCOV file.
 
 ## Built-In Builders
 
-Builder commands run a coverage tool and pass the generated LCOV into the same report builder.
+Run a coverage tool and build its report in one command. The underlying tool must be installed in your project or environment.
 
 ```bash
 doublcov forge -- --exclude-tests --ir-minimum
@@ -117,11 +120,11 @@ doublcov forge -- --match-path test/Foo.t.sol
 doublcov cargo-llvm-cov -- --workspace
 ```
 
-Builder integrations are built into the CLI. Adding a new builder requires a code change in this repository; see [Extending Doublcov](docs/EXTENDING.md).
+To add a builder, see [Extending Doublcov](docs/EXTENDING.md).
 
 ## Usage Guides
 
-Per-framework guides live in [docs/usage](docs/usage/README.md). Each one covers prerequisites, install, quick start, argument forwarding, package scripts, manual LCOV use, a CI snippet, and known gotchas.
+Choose a [usage guide](docs/usage/README.md) for setup, command examples, CI integration, and troubleshooting:
 
 - Solidity: [Foundry](docs/usage/foundry.md), [Hardhat](docs/usage/hardhat.md)
 - JavaScript and TypeScript: [Jest](docs/usage/jest.md), [Vitest](docs/usage/vitest.md), [Node test runner with c8](docs/usage/c8.md)
@@ -132,7 +135,7 @@ Per-framework guides live in [docs/usage](docs/usage/README.md). Each one covers
 
 ## Languages
 
-The report core is generic LCOV. Built-in source detection and syntax highlighting cover Solidity, C, C++, TypeScript, JavaScript, Python, Rust, Go, Java, C#, Kotlin, PHP, Ruby, Swift, Scala, Dart, Lua, R, shell, CSS, HTML/XML, Vue, JSON, YAML, TOML, and Markdown.
+Doublcov accepts LCOV from any coverage tool. Built-in source detection and syntax highlighting cover Solidity, C, C++, TypeScript, JavaScript, Python, Rust, Go, Java, C#, Kotlin, PHP, Ruby, Swift, Scala, Dart, Lua, R, shell, CSS, HTML/XML, Vue, JSON, YAML, TOML, and Markdown.
 
 Unknown source files can still be included with `--extensions` and render as plain text.
 
@@ -163,7 +166,7 @@ See [Configuration](docs/CONFIGURATION.md).
 
 ## Diagnostics
 
-Diagnostics are optional parser-tagged files layered on top of LCOV. Foundry debug and bytecode diagnostics are built in:
+Attach diagnostic files to show information alongside coverage. Prefix each path with its parser name; Foundry debug and bytecode parsers are built in:
 
 ```bash
 doublcov build \
@@ -180,7 +183,7 @@ doublcov forge --debug coverage.debug --bytecode coverage.bytecode
 
 ## CI And Hosting
 
-Standalone reports can be opened directly from disk. Static reports are better for large projects and can be uploaded to CI artifacts, GitHub Pages, GitLab Pages, Cloudflare Pages, Netlify, Vercel, object storage, or any static file server. Hosted reports include OpenGraph and Twitter card metadata plus a bundled preview image, so public links unfurl cleanly in clients such as Discord, Telegram, and Slack.
+Use standalone reports for opening from disk. For large projects or hosting, choose `--mode static` and upload the entire output directory to CI artifacts, GitHub Pages, object storage, or another static host. Publicly hosted reports include metadata and an image for link previews.
 
 GitHub Actions example:
 
@@ -191,18 +194,21 @@ GitHub Actions example:
     args: --lcov coverage/lcov.info --sources src --out coverage/report
 ```
 
-Add `version: v0.4.5` when you want to pin the downloaded Doublcov binary instead of using the latest release.
+Add `version: v0.4.6` when you want to pin the downloaded Doublcov binary instead of using the latest release.
 
-Use the npm package for Node projects, the GitHub Action for language-neutral CI, standalone binaries for local non-Node use, and Docker when your CI standardizes on containers. See [CI And Hosting](docs/CI.md) and [Releasing](docs/RELEASING.md).
+See [CI And Hosting](docs/CI.md) for artifact uploads, GitHub Pages, and persistent coverage history. [Releasing](docs/RELEASING.md) describes the available distribution channels.
 
 The GitHub Action passes `--no-open` by default. Add `--open` to `args` only when a workflow intentionally has a browser-capable environment.
 
 ## Development
 
 ```bash
-pnpm install
+corepack enable
+pnpm install --frozen-lockfile
 pnpm run verify:publish
 ```
+
+The workspace pins pnpm in `package.json`. See [Code Quality Standards](docs/CODE_QUALITY.md) for development checks and [Releasing](docs/RELEASING.md) for the release process.
 
 Build a local standalone binary:
 

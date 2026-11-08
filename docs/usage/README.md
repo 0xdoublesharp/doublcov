@@ -1,8 +1,8 @@
 # Usage Guides
 
-One guide per built-in builder. Each page covers prerequisites, install, quick start, argument forwarding, package scripts, manual LCOV use, a CI snippet, and known gotchas.
+Choose the coverage tool your project uses. Each guide covers installation, generating a report, forwarding arguments, CI setup, and troubleshooting. If your tool already produces LCOV, start with [Generic LCOV](generic-lcov.md).
 
-Builder commands open reports by default for local runs and default to `--no-open` in CI. Defaults resolve from CLI flags, then `doublcov.config.json`, then ecosystem config such as `package.json`, `foundry.toml`, Hardhat/Jest/Vitest/c8 config, `.solcover.js`, or `pyproject.toml`.
+Local runs open a standalone report in your browser. CI defaults to a split static report without opening a browser. CLI flags override `doublcov.config.json`, which overrides defaults read from your coverage tool's configuration. See [Configuration](../CONFIGURATION.md) for the full precedence order.
 
 ## Solidity
 

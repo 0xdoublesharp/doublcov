@@ -1,6 +1,6 @@
 # Hardhat
 
-Builder name: `hardhat`. Runs `npx hardhat coverage` (which uses `solidity-coverage`) and feeds the produced LCOV into Doublcov.
+Run `doublcov hardhat` to collect coverage with `solidity-coverage` and build a report. The builder runs `npx hardhat coverage` in your project.
 
 ## Prerequisites
 
@@ -73,12 +73,12 @@ doublcov build \
 ## CI snippet
 
 ```yaml
-- uses: actions/setup-node@v4
+- uses: actions/setup-node@v7
   with:
     node-version: 22
 - run: npm ci
-- run: npx doublcov hardhat
-- uses: actions/upload-artifact@v4
+- run: npx @0xdoublesharp/doublcov hardhat
+- uses: actions/upload-artifact@v7
   with:
     name: coverage-report
     path: coverage/report

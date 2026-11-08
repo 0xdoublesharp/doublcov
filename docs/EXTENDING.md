@@ -1,6 +1,6 @@
 # Extending Doublcov
 
-Doublcov is structured around a generic LCOV core, a CLI package, and a static web app.
+Add coverage builders in the CLI, parsing and language support in the core, and syntax highlighting in the web app. These packages share a report model.
 
 ## Package Boundaries
 
@@ -22,16 +22,7 @@ These APIs are useful when another tool wants to consume LCOV and build Doublcov
 
 ## CLI Extension Boundary
 
-The CLI has internal builder integration modules for Foundry, Hardhat, Vite/Vitest, Jest, Node/V8 through c8, Pytest, cargo-llvm-cov, cargo-tarpaulin, and lcov/gcov capture. The registry is internal to the CLI package.
-
-That means:
-
-- New builders require a code change in this repository.
-- There is no runtime plugin discovery.
-- There is no `doublcov plugin add` command.
-- There is no npm package naming convention for third-party builder plugins yet.
-
-This keeps the production surface focused while the report schema, CLI flags, and builder contract evolve.
+The CLI includes builders for Foundry, Hardhat, Vitest, Jest, Node/V8 through c8, pytest, cargo-llvm-cov, cargo-tarpaulin, and lcov/gcov capture. Add new builders to this repository's internal registry. The CLI does not discover or install third-party builder packages, and there is no `doublcov plugin add` command or plugin package naming convention.
 
 ## Runtime Plugin Considerations
 
@@ -45,7 +36,7 @@ A runtime plugin system would need to define:
 - version compatibility checks
 - safe loading rules for local CI
 
-Builder plugin shape should stay close to the internal model:
+A future builder plugin API should stay close to the internal model:
 
 ```ts
 interface CoverageBuilderPlugin {
@@ -90,7 +81,7 @@ For web syntax highlighting, update:
 apps/web/src/syntax.ts
 ```
 
-For confidence, add fixtures under:
+Add representative fixtures under:
 
 ```text
 fixtures/languages
